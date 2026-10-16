@@ -25,5 +25,8 @@ IMMICH_BUNDLE_ID_DEV = app.futo.immich
 // Build scheme suffixes (`.debug`/`.profile`) will be appended
 IMMICH_GROUP_ID = group.app.immich.share
 
+// fork: home screen name
+IMMICH_DISPLAY_NAME = $(PRODUCT_NAME)
+
 // Optional per-developer configuration override
 #include? "Signing.local.xcconfig"

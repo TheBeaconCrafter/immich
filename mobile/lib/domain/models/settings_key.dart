@@ -17,6 +17,7 @@ enum SettingsKey<T> {
   // Image
   imagePreferRemote<bool>(),
   imageLoadOriginal<bool>(),
+  imageHdr<bool>(), // fork: Ultra HDR viewer
 
   // Viewer
   viewerLoopVideo<bool>(),

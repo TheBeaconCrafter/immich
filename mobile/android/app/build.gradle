@@ -116,3 +116,6 @@ dependencies {
 //f configurations.all {
 //f     exclude group: 'com.google.android.gms'
 //f }
+
+// fork: custom application id / app name
+apply from: "fork.gradle"

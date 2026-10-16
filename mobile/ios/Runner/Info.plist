@@ -14,7 +14,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>${PRODUCT_NAME}</string>
+    <string>$(IMMICH_DISPLAY_NAME)</string>
     <key>CFBundleDocumentTypes</key>
     <array>
       <dict>

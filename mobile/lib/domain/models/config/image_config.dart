@@ -5,5 +5,10 @@ part 'image_config.freezed.dart';
 
 @freezed
 abstract class ImageConfig with _$ImageConfig {
-  const factory ImageConfig({@Default(false) bool preferRemote, @Default(false) bool loadOriginal}) = _ImageConfig;
+  const factory ImageConfig({
+    @Default(false) bool preferRemote,
+    @Default(false) bool loadOriginal,
+    // fork: Ultra HDR viewer
+    @Default(true) bool hdr,
+  }) = _ImageConfig;
 }

@@ -1,0 +1,3 @@
+# Copy to fork.properties (git-ignored) to install this fork next to the official app.
+IMMICH_APP_ID=com.example.immich.hdr
+IMMICH_APP_NAME=Immich HDR

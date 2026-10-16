@@ -1,0 +1,31 @@
+// Optional IMMICH_APP_ID / IMMICH_APP_NAME overrides, read from the environment, a Gradle property
+// or android/fork.properties (in that order). See FORK.md.
+
+def forkProperties = new Properties()
+def forkPropertiesFile = rootProject.file('fork.properties')
+if (forkPropertiesFile.exists()) {
+  forkPropertiesFile.withInputStream { forkProperties.load(it) }
+}
+
+def forkValue = { String key ->
+  def value = System.getenv(key) ?: project.findProperty(key) ?: forkProperties.getProperty(key)
+  return value?.toString()?.trim() ?: null
+}
+
+def forkAppId = forkValue('IMMICH_APP_ID')
+def forkAppName = forkValue('IMMICH_APP_NAME')
+
+android {
+  defaultConfig {
+    if (forkAppId) {
+      applicationId forkAppId
+    }
+    if (forkAppName) {
+      resValue "string", "app_name", forkAppName
+    }
+  }
+}
+
+if (forkAppId || forkAppName) {
+  logger.lifecycle("Fork build: applicationId=${forkAppId ?: android.defaultConfig.applicationId}, app_name=${forkAppName ?: '(default)'}")
+}
