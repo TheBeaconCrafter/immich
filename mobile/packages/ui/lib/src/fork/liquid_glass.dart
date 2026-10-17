@@ -1,10 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 // Fork feature: native Liquid Glass components on iOS 26+ (see FORK.md). Native side: ios/Runner/Core/LiquidGlass/.
@@ -103,17 +100,38 @@ class NativeMenuAnchor extends StatefulWidget {
   State<NativeMenuAnchor> createState() => _NativeMenuAnchorState();
 }
 
-class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
-  final _fallbackController = MenuController();
-  final _menuKey = GlobalKey();
-  MethodChannel? _channel;
-  List<VoidCallback?> _actions = const [];
+const _menuChannel = MethodChannel('immich/liquid_glass_menu');
 
-  MenuController get _controller => widget.controller ?? _fallbackController;
+/// Opens the native menu instead of Flutter's when the trigger calls [open].
+class _NativeMenuController extends MenuController {
+  final VoidCallback onOpen;
+
+  _NativeMenuController(this.onOpen);
+
+  @override
+  void open({Offset? position}) => onOpen();
+
+  @override
+  void close() {}
+
+  @override
+  bool get isOpen => false;
+}
+
+class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
+  static _NativeMenuAnchorState? _shown;
+  static bool _handlerSet = false;
+
+  final _anchorKey = GlobalKey();
+  final _menuKey = GlobalKey();
+  late final _nativeController = _NativeMenuController(_showNative);
+  List<VoidCallback?> _actions = const [];
 
   @override
   void dispose() {
-    _channel?.setMethodCallHandler(null);
+    if (_shown == this) {
+      _shown = null;
+    }
     super.dispose();
   }
 
@@ -131,21 +149,10 @@ class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
       );
     }
 
-    final trigger = widget.builder?.call(context, _controller, widget.child) ?? widget.child ?? const SizedBox();
+    final trigger = widget.builder?.call(context, _nativeController, widget.child) ?? widget.child ?? const SizedBox();
     return Stack(
       children: [
-        trigger,
-        Positioned.fill(
-          child: UiKitView(
-            viewType: 'immich/glass_menu',
-            creationParamsCodec: const StandardMessageCodec(),
-            hitTestBehavior: PlatformViewHitTestBehavior.opaque,
-            gestureRecognizers: const <Factory<OneSequenceGestureRecognizer>>{
-              Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
-            },
-            onPlatformViewCreated: _onCreated,
-          ),
-        ),
+        KeyedSubtree(key: _anchorKey, child: trigger),
         // Built but never painted, so the entries can be read when the native menu opens.
         Offstage(
           child: KeyedSubtree(
@@ -157,20 +164,39 @@ class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
     );
   }
 
-  void _onCreated(int id) {
-    _channel = MethodChannel('immich/glass_menu_$id')
-      ..setMethodCallHandler((call) async {
-        switch (call.method) {
-          case 'items':
-            return _items();
-          case 'select':
-            final index = call.arguments as int;
-            if (index >= 0 && index < _actions.length) {
-              _actions[index]?.call();
-            }
+  Future<void> _showNative() async {
+    final box = _anchorKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) {
+      return;
+    }
+    if (!_handlerSet) {
+      _handlerSet = true;
+      _menuChannel.setMethodCallHandler((call) async {
+        if (call.method == 'menu.select') {
+          _shown?._select(call.arguments as int);
         }
         return null;
       });
+    }
+    final origin = box.localToGlobal(Offset.zero);
+    final items = await _items();
+    if (!mounted) {
+      return;
+    }
+    _shown = this;
+    await _menuChannel.invokeMethod<bool>('menu.show', {
+      'x': origin.dx,
+      'y': origin.dy,
+      'width': box.size.width,
+      'height': box.size.height,
+      'items': items,
+    });
+  }
+
+  void _select(int index) {
+    if (index >= 0 && index < _actions.length) {
+      _actions[index]?.call();
+    }
   }
 
   Future<List<Map<String, Object?>>> _items() async {

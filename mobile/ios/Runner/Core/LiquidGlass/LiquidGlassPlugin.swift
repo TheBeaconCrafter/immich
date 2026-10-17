@@ -4,15 +4,15 @@ import UIKit
 /// Fork feature: native Liquid Glass components for the Flutter UI (iOS 26+), see FORK.md.
 ///
 /// - `immich/glass_surface`: a glass material platform view drawn behind Flutter content (sheets, button groups).
-/// - `immich/glass_menu`: an invisible native button over a Flutter menu trigger that opens a native UIMenu.
 /// - `immich/liquid_glass` channel: drives a native UITabBar laid over the Flutter view.
+/// - `immich/liquid_glass_menu` channel: presents native UIMenus for Flutter menu triggers.
 final class LiquidGlassPlugin: NSObject {
   private static var tabBar: NativeTabBar?
+  private static var menu: NativeMenuPresenter?
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let messenger = registrar.messenger()
     registrar.register(GlassSurfaceFactory(), withId: "immich/glass_surface")
-    registrar.register(GlassMenuFactory(messenger: messenger), withId: "immich/glass_menu")
 
     let channel = FlutterMethodChannel(name: "immich/liquid_glass", binaryMessenger: messenger)
     let tabBar = NativeTabBar(channel: channel)
@@ -21,6 +21,18 @@ final class LiquidGlassPlugin: NSObject {
       switch call.method {
       case "tabBar.update":
         result(tabBar.update(call.arguments as? [String: Any] ?? [:]))
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    let menuChannel = FlutterMethodChannel(name: "immich/liquid_glass_menu", binaryMessenger: messenger)
+    let menu = NativeMenuPresenter(channel: menuChannel)
+    Self.menu = menu
+    menuChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "menu.show":
+        result(menu.show(call.arguments as? [String: Any] ?? [:]))
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -38,8 +50,21 @@ private final class GlassSurfaceFactory: NSObject, FlutterPlatformViewFactory {
   }
 }
 
+/// A view that never takes part in hit testing, and stops Flutter's touch-intercepting wrapper around it from doing
+/// so too. Glass surfaces are pure decoration under Flutter content; if their wrappers intercepted touches, taps on
+/// the Flutter buttons drawn on top could get stuck, e.g. next to the video player's platform view.
+private final class TouchTransparentView: UIView {
+  override func didMoveToSuperview() {
+    super.didMoveToSuperview()
+    superview?.isUserInteractionEnabled = false
+  }
+
+  override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? { nil }
+}
+
 /// Creation params: `radius` (points, negative for a capsule), `topOnly` (round only the top corners).
 private final class GlassSurfaceView: NSObject, FlutterPlatformView {
+  private let container = TouchTransparentView()
   private let effectView: UIVisualEffectView
 
   init(frame: CGRect, params: [String: Any]) {
@@ -48,8 +73,11 @@ private final class GlassSurfaceView: NSObject, FlutterPlatformView {
     } else {
       effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
     }
-    effectView.frame = frame
+    container.frame = frame
+    effectView.frame = container.bounds
+    effectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     effectView.isUserInteractionEnabled = false
+    container.addSubview(effectView)
     super.init()
 
     let radius = (params["radius"] as? NSNumber)?.doubleValue ?? 0
@@ -65,54 +93,75 @@ private final class GlassSurfaceView: NSObject, FlutterPlatformView {
     }
   }
 
-  func view() -> UIView { effectView }
+  func view() -> UIView { container }
 }
 
 // MARK: - Native menu
 
-private final class GlassMenuFactory: NSObject, FlutterPlatformViewFactory {
-  private let messenger: FlutterBinaryMessenger
+/// Presents a native UIMenu at a rect of the Flutter view (`menu.show` → {x, y, width, height, items}), reporting a
+/// pick through `menu.select`. It uses a hidden UIKit button outside Flutter's view tree: a platform view in Flutter's
+/// touch path can deadlock all touches when it shares the screen with other platform views, such as the video player.
+/// Items: {id, title, image?, destructive, disabled} or {divider: true}.
+private final class NativeMenuPresenter: NSObject {
+  /// Reports when its menu closes, with or without a pick.
+  private final class MenuButton: UIButton {
+    var onMenuEnd: (() -> Void)?
 
-  init(messenger: FlutterBinaryMessenger) {
-    self.messenger = messenger
-    super.init()
+    override func contextMenuInteraction(
+      _ interaction: UIContextMenuInteraction,
+      willEndFor configuration: UIContextMenuConfiguration,
+      animator: (any UIContextMenuInteractionAnimating)?
+    ) {
+      super.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+      if let animator {
+        animator.addCompletion { [weak self] in self?.onMenuEnd?() }
+      } else {
+        onMenuEnd?()
+      }
+    }
   }
 
-  func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol { FlutterStandardMessageCodec.sharedInstance() }
-
-  func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> FlutterPlatformView {
-    GlassMenuView(frame: frame, viewId: viewId, messenger: messenger)
-  }
-}
-
-/// A transparent button covering the Flutter menu trigger. The menu's items are fetched from Flutter each time it
-/// opens (`items` → list of {id, title, image?, destructive, disabled, section}) and a pick is reported via `select`.
-private final class GlassMenuView: NSObject, FlutterPlatformView {
-  private let button = UIButton(type: .custom)
   private let channel: FlutterMethodChannel
+  private var button: MenuButton?
 
-  init(frame: CGRect, viewId: Int64, messenger: FlutterBinaryMessenger) {
-    channel = FlutterMethodChannel(name: "immich/glass_menu_\(viewId)", binaryMessenger: messenger)
+  init(channel: FlutterMethodChannel) {
+    self.channel = channel
     super.init()
-    button.frame = frame
-    button.backgroundColor = .clear
-    button.showsMenuAsPrimaryAction = true
-    if #available(iOS 16.0, *) { button.preferredMenuElementOrder = .fixed }
-    button.menu = UIMenu(children: [
-      UIDeferredMenuElement.uncached { [weak self] completion in
-        guard let self else { return completion([]) }
-        self.channel.invokeMethod("items", arguments: nil) { result in
-          completion(self.elements(from: result as? [[String: Any]] ?? []))
-        }
-      },
-    ])
   }
 
-  deinit {
-    channel.setMethodCallHandler(nil)
+  func show(_ args: [String: Any]) -> Bool {
+    guard #available(iOS 17.4, *), let host = rootViewController()?.view else { return false }
+    let button = self.button ?? {
+      let button = MenuButton(type: .custom)
+      button.isUserInteractionEnabled = false
+      button.showsMenuAsPrimaryAction = true
+      button.preferredMenuElementOrder = .fixed
+      button.onMenuEnd = { [weak host] in
+        // Presenting a menu cancels every gesture recognizer in the window, and the recognizers Flutter puts around
+        // platform views (e.g. the video player) don't recover from that: all touches would stop reaching Flutter.
+        DispatchQueue.main.async { if let host { Self.resetTouchInterceptors(in: host) } }
+      }
+      host.addSubview(button)
+      self.button = button
+      return button
+    }()
+    func value(_ key: String) -> CGFloat { CGFloat((args[key] as? NSNumber)?.doubleValue ?? 0) }
+    button.frame = CGRect(x: value("x"), y: value("y"), width: value("width"), height: value("height"))
+    button.menu = UIMenu(children: elements(from: args["items"] as? [[String: Any]] ?? []))
+    button.performPrimaryAction()
+    return true
   }
 
-  func view() -> UIView { button }
+  /// Resets the gesture recognizers of Flutter's platform view touch interceptors by toggling them.
+  private static func resetTouchInterceptors(in view: UIView) {
+    if String(describing: type(of: view)).contains("TouchInterceptingView") {
+      for recognizer in view.gestureRecognizers ?? [] {
+        recognizer.isEnabled = false
+        recognizer.isEnabled = true
+      }
+    }
+    view.subviews.forEach(resetTouchInterceptors)
+  }
 
   private func elements(from items: [[String: Any]]) -> [UIMenuElement] {
     var sections: [[UIMenuElement]] = [[]]
@@ -126,7 +175,7 @@ private final class GlassMenuView: NSObject, FlutterPlatformView {
         .flatMap { UIImage(data: $0.data, scale: 3) }?
         .withRenderingMode(.alwaysTemplate)
       let action = UIAction(title: item["title"] as? String ?? "", image: image) { [weak self] _ in
-        self?.channel.invokeMethod("select", arguments: id)
+        self?.channel.invokeMethod("menu.select", arguments: id)
       }
       if item["destructive"] as? Bool == true { action.attributes.insert(.destructive) }
       if item["disabled"] as? Bool == true { action.attributes.insert(.disabled) }
@@ -136,6 +185,14 @@ private final class GlassMenuView: NSObject, FlutterPlatformView {
     if nonEmpty.count <= 1 { return nonEmpty.first ?? [] }
     return nonEmpty.map { UIMenu(options: .displayInline, children: $0) }
   }
+}
+
+private func rootViewController() -> UIViewController? {
+  UIApplication.shared.connectedScenes
+    .compactMap { $0 as? UIWindowScene }
+    .flatMap(\.windows)
+    .first(where: \.isKeyWindow)?
+    .rootViewController
 }
 
 // MARK: - Native tab bar
@@ -199,7 +256,7 @@ private final class NativeTabBar: NSObject, UITabBarDelegate {
 
   private func ensureTabBar() -> UITabBar? {
     if let tabBar { return tabBar }
-    guard let host = Self.rootViewController()?.view else { return nil }
+    guard let host = rootViewController()?.view else { return nil }
     let tabBar = UITabBar()
     tabBar.delegate = self
     tabBar.alpha = 0
@@ -213,13 +270,5 @@ private final class NativeTabBar: NSObject, UITabBarDelegate {
     ])
     self.tabBar = tabBar
     return tabBar
-  }
-
-  private static func rootViewController() -> UIViewController? {
-    UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)?
-      .rootViewController
   }
 }
