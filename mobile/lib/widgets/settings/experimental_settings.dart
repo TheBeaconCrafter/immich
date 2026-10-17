@@ -27,6 +27,13 @@ class ExperimentalSettings extends StatelessWidget {
               'Downloads the original file of remote photos. On Android, changes apply after restarting the app.',
           onChanged: setHdrEnabled,
         ),
+        const _ToggleSetting(
+          setting: .themeNewSearch,
+          title: 'New search',
+          subtitle:
+              'A search bar at the bottom that suggests people, places, cameras, dates, media types and text as you '
+              'type, like iOS Photos. Suggestions combine.',
+        ),
         if (Platform.isAndroid) ...const [
           _ToggleSetting(
             setting: .imageHdrVideo,

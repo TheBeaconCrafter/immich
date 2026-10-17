@@ -15,9 +15,11 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/models/search/search_filter.model.dart';
 import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
+import 'package:immich_mobile/presentation/pages/search/smart/smart_search.page.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/search/quick_date_picker.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
+import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
@@ -37,8 +39,17 @@ import 'package:immich_mobile/widgets/search/search_filter/star_rating_picker.da
 import 'package:immich_ui/immich_ui.dart' show GlassSurface, NativeMenuAnchor;
 
 @RoutePage()
-class SearchPage extends HookConsumerWidget {
+class SearchPage extends ConsumerWidget {
   const SearchPage({super.key});
+
+  // fork: experimental search (see FORK.md)
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(appConfigProvider.select((c) => c.theme.newSearch)) ? const SmartSearchView() : const _SearchPage();
+}
+
+class _SearchPage extends HookConsumerWidget {
+  const _SearchPage();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

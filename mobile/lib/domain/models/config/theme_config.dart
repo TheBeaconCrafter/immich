@@ -17,5 +17,6 @@ abstract class ThemeConfig with _$ThemeConfig {
     @Default(false) bool floatingTabBar,
     @Default(true) bool liquidGlass,
     @Default(true) bool predictiveBack,
+    @Default(false) bool newSearch,
   }) = _ThemeConfig;
 }

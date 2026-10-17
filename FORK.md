@@ -105,7 +105,8 @@ The setting's strings are hard-coded English, so there are no edits to `i18n/en.
 | Display HDR photos | Android, iOS | on |
 | Material You theming: uses the device's own Material You colors, exactly as Android computes them (including styles such as monochrome), and replaces the primary color option | Android | on |
 | Play HDR videos in HDR: plays HDR videos from the original file on HDR displays, as the server's transcodes are SDR | Android | on |
-| Predictive back: pages follow the back gesture with Android's predictive back transition | Android | on |
+| Predictive back: pages, the photo viewer and the account dialog follow the back gesture | Android | on |
+| New search: a bottom search bar with iOS Photos style suggestions that combine as filters (see below) | Android, iOS | off |
 | Floating tab bar: a Google Photos style pill with the tabs and a separate round search button | Android | off |
 
 Code: `mobile/lib/widgets/settings/experimental_settings.dart`, `mobile/lib/theme/material_you.dart` and
@@ -121,7 +122,8 @@ Upstream touch points (each marked `fork:`):
 - `library.page.dart`: keeps the last entries clear of the floating tab bar.
 - `tab_shell.page.dart`: the floating tab bar.
 - `AndroidManifest.xml`: opts into predictive back (`enableOnBackInvokedCallback`); `theme_data.dart`: the page
-  transitions from `mobile/lib/theme/predictive_back.dart` (one line).
+  transitions from `mobile/lib/theme/predictive_back.dart` (one line); `router.dart` and `immich_sliver_app_bar.dart`:
+  `PredictiveBackGesture` around the photo viewer and the account dialog.
 
 ## Liquid Glass on iOS (branch `feat/ios-liquid-glass`)
 
@@ -169,6 +171,18 @@ Upstream touch points (each marked `fork:`):
 - `base_action_button.widget.dart` and `column_button.dart`: icon only inside a `GlassIconOnly` toolbar.
 - `immich_sliver_app_bar.dart`: the sync indicator no longer leaves an empty slot once it has faded out.
 - `immich_ui.dart`: exports the glass widgets.
+
+## New search (experimental setting)
+
+Typing in the bottom search bar suggests people, cities, regions, countries, camera makes and models, photos or
+videos, dates ("2024", "june 2024", "last month"), favorites, tags, text in photos, descriptions, file names and a
+search by content. Picking one turns it into a token in the bar; tokens combine, and backspace on an empty field
+removes the last one. The chips above the bar list every value of a category. Suggestions show how many assets
+match together with the current tokens (from the server's search statistics) and disappear when nothing matches.
+On iOS 26+ the bar, chips and suggestions are Liquid Glass.
+
+Code: `mobile/lib/presentation/pages/search/smart/`. Upstream touch point: `search.page.dart` picks the new or the
+classic search page (`SearchPage` → `_SearchPage`).
 
 ## Building and running
 

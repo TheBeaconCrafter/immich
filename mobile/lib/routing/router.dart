@@ -79,6 +79,7 @@ import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/auth.service.dart';
 import 'package:immich_mobile/services/local_auth.service.dart';
 import 'package:immich_mobile/services/secure_storage.service.dart';
+import 'package:immich_mobile/theme/predictive_back.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 part 'router.gr.dart';
@@ -155,7 +156,7 @@ class AppRouter extends RootStackRouter {
         customRouteBuilder: <T>(context, child, page) => PageRouteBuilder<T>(
           fullscreenDialog: page.fullscreenDialog,
           settings: page,
-          pageBuilder: (_, _, _) => child,
+          pageBuilder: (_, _, _) => PredictiveBackGesture(child: child), // fork: Android predictive back
           opaque: false,
           transitionsBuilder: TransitionsBuilders.fadeIn,
         ),

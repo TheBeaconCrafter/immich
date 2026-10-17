@@ -18,6 +18,7 @@ import 'package:immich_mobile/providers/sync_status.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/theme/predictive_back.dart';
 import 'package:immich_mobile/widgets/asset_viewer/cast_dialog.dart';
 import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_dialog.dart';
 import 'package:immich_mobile/widgets/common/user_circle_avatar.dart';
@@ -134,7 +135,7 @@ class _ProfileIndicator extends ConsumerWidget {
         context: context,
         useRootNavigator: false,
         barrierDismissible: !isIpad,
-        builder: (ctx) => const ImmichAppBarDialog(),
+        builder: (ctx) => const PredictiveBackGesture(child: ImmichAppBarDialog()), // fork: Android predictive back
       ),
       onLongPress: () => toggleReadonlyMode(),
       icon: Badge(

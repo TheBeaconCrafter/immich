@@ -1,8 +1,23 @@
 > [!NOTE]
-> **This is a fork of [Immich](https://github.com/immich-app/immich)** that adds Ultra HDR image rendering to the
-> mobile app: HDR gain map photos (Android Ultra HDR, iPhone HDR) are shown with their full brightness range on
-> Android and iOS. See [FORK.md](FORK.md) for details and build instructions. For everything else, use the
-> [official repository](https://github.com/immich-app/immich).
+> **This is an opinionated fork of [Immich](https://github.com/immich-app/immich).** It changes things in the
+> mobile app that I personally think should be different. It is not affiliated with the Immich team; for the
+> server, the web app and anything else, use the [official repository](https://github.com/immich-app/immich).
+>
+> Highlights (most can be toggled in *Settings → Experimental*):
+>
+> - **Ultra HDR photos** on Android and iOS: HDR gain map photos (Android Ultra HDR, iPhone HDR, including older
+>   iPhones) are shown with their full brightness range, preloaded and faded in.
+> - **HDR video on Android**: iPhone Dolby Vision and other HDR videos play in HDR instead of the SDR transcode.
+> - **Liquid Glass on iOS 26+**: native glass tab bar, menus, sheets and buttons, and an iOS Photos style viewer
+>   toolbar.
+> - **Material You on Android**: the device's own Material You colors, including monochrome.
+> - **Floating tab bar** on Android, in the style of Google Photos.
+> - **Predictive back** on Android, including the photo viewer and dialogs.
+> - **New search**: a bottom search bar with iOS Photos style suggestions for people, places, cameras, dates, media
+>   types and text, combinable as filters.
+> - A build option to install the fork next to the official app under its own name and bundle ID.
+>
+> See [FORK.md](FORK.md) for details and build instructions.
 
 <p align="center"> 
   <br/>
