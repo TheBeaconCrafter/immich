@@ -43,6 +43,11 @@ class ExperimentalSettings extends StatelessWidget {
                 'primary color setting.',
           ),
           _ToggleSetting(
+            setting: .themePredictiveBack,
+            title: 'Predictive back',
+            subtitle: 'Preview the previous page while you swipe back, following your finger.',
+          ),
+          _ToggleSetting(
             setting: .themeFloatingTabBar,
             title: 'Floating tab bar',
             subtitle: 'Use a floating navigation bar that photos scroll underneath, with a separate search button.',

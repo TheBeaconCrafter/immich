@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:immich_mobile/constants/locales.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
+import 'package:immich_mobile/theme/predictive_back.dart';
 
 class ImmichTheme {
   final ColorScheme light;
@@ -15,6 +16,7 @@ ThemeData getThemeData({required ColorScheme colorScheme, required Locale locale
 
   return ThemeData(
     useMaterial3: true,
+    pageTransitionsTheme: predictiveBackTransitions(), // fork: Android predictive back
     brightness: colorScheme.brightness,
     colorScheme: colorScheme,
     primaryColor: colorScheme.primary,

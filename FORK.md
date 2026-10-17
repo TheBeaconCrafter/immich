@@ -77,7 +77,7 @@ renders into a transparent surface above the window. Other devices keep upstream
 setting takes effect on Android after an app restart.
 
 HDR videos (iPhone Dolby Vision/HLG, Pixel HDR) play from the original file on Android HDR displays when the HDR
-setting is on: the server's transcodes are tone-mapped to SDR. This uses more data than the transcode.
+video setting is on: the server's transcodes are tone-mapped to SDR. This uses more data than the transcode.
 
 While you drag a photo down to dismiss it, the normal Flutter image takes over, and the HDR one comes back if you
 let go.
@@ -104,6 +104,8 @@ The setting's strings are hard-coded English, so there are no edits to `i18n/en.
 | --- | --- | --- |
 | Display HDR photos | Android, iOS | on |
 | Material You theming: uses the device's own Material You colors, exactly as Android computes them (including styles such as monochrome), and replaces the primary color option | Android | on |
+| Play HDR videos in HDR: plays HDR videos from the original file on HDR displays, as the server's transcodes are SDR | Android | on |
+| Predictive back: pages follow the back gesture with Android's predictive back transition | Android | on |
 | Floating tab bar: a Google Photos style pill with the tabs and a separate round search button | Android | off |
 
 Code: `mobile/lib/widgets/settings/experimental_settings.dart`, `mobile/lib/theme/material_you.dart` and
@@ -118,6 +120,8 @@ Upstream touch points (each marked `fork:`):
   color option while Material You is on.
 - `library.page.dart`: keeps the last entries clear of the floating tab bar.
 - `tab_shell.page.dart`: the floating tab bar.
+- `AndroidManifest.xml`: opts into predictive back (`enableOnBackInvokedCallback`); `theme_data.dart`: the page
+  transitions from `mobile/lib/theme/predictive_back.dart` (one line).
 
 ## Liquid Glass on iOS (branch `feat/ios-liquid-glass`)
 

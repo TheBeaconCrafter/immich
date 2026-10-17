@@ -16,5 +16,6 @@ abstract class ThemeConfig with _$ThemeConfig {
     @Default(true) bool materialYou,
     @Default(false) bool floatingTabBar,
     @Default(true) bool liquidGlass,
+    @Default(true) bool predictiveBack,
   }) = _ThemeConfig;
 }
