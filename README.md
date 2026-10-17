@@ -18,6 +18,9 @@
 > - A build option to install the fork next to the official app under its own name and bundle ID.
 >
 > See [FORK.md](FORK.md) for details and build instructions.
+>
+> I know that some of these implementations have drawbacks (more data, more native code, workarounds for
+> Flutter limitations), and that's exactly why they live in a fork rather than upstream.
 
 <p align="center"> 
   <br/>
