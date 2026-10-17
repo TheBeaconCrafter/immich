@@ -27,6 +27,7 @@ import app.alextran.immich.sync.NativeSyncApi
 import app.alextran.immich.sync.NativeSyncApiImpl26
 import app.alextran.immich.sync.NativeSyncApiImpl30
 import app.alextran.immich.viewintent.ViewIntentPlugin
+import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.engine.FlutterEngine
@@ -34,7 +35,8 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterFragmentActivity() {
   // fork: Ultra HDR viewer draws below a transparent Flutter surface on HDR displays
   override fun getBackgroundMode() = HdrMode.backgroundMode(this)
-  override fun getRenderMode() = RenderMode.surface
+  // A texture rather than an on-top SurfaceView, so hybrid composition platform views (the video player) still work
+  override fun getRenderMode() = if (HdrMode.backgroundMode(this) == BackgroundMode.transparent) RenderMode.texture else RenderMode.surface
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)

@@ -8,12 +8,18 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import java.nio.ByteBuffer
+import kotlin.math.ln
+import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * Android decodes HEIC base images but ignores their HDR gain maps. iPhones (iOS 18+) store an ISO 21496-1
  * gain map as a `tmap` derived item referencing the base image and a gain map image item. This reads that
  * metadata, decodes the gain map item (by pointing the file's primary item at it) and attaches it as a [Gainmap].
+ *
+ * Photos taken before iOS 18 (e.g. on an iPhone 13 or 15 Pro) only carry Apple's own HDR gain map: an auxiliary
+ * `urn:com:apple:photo:2020:aux:hdrgainmap` image, with the headroom derived from two Apple maker note values.
  */
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 internal object HeifGainmap {
@@ -27,10 +33,7 @@ internal object HeifGainmap {
       return false
     } ?: return false
 
-    val tmap = heif.items.values.firstOrNull { it.type == "tmap" } ?: run {
-      Log.i(TAG, "No tmap item")
-      return false
-    }
+    val tmap = heif.items.values.firstOrNull { it.type == "tmap" } ?: return attachApple(bytes, heif, base)
     val refs = heif.dimg[tmap.id]
     if (refs == null || refs.size < 2) {
       Log.w(TAG, "tmap item ${tmap.id} has no gain map reference: $refs")
@@ -55,8 +58,39 @@ internal object HeifGainmap {
     return true
   }
 
-  /** Decodes a monochrome `hvc1` item or `grid` of them with libde265, applying the item's own rotation. */
-  private fun decodeMonochrome(heif: Heif, itemId: Int): Bitmap? {
+  /** Attaches Apple's pre-iOS 18 HDR gain map, if the file has one. */
+  private fun attachApple(bytes: ByteArray, heif: Heif, base: Bitmap): Boolean {
+    val item = heif.items.keys.firstOrNull { heif.auxType(it)?.contains("hdrgainmap") == true } ?: run {
+      Log.i(TAG, "No tmap item or Apple HDR gain map")
+      return false
+    }
+    val exif = heif.items.values.firstOrNull { it.type == "Exif" }?.let { heif.itemData(it.id) }
+    val headroom = exif?.let(AppleHdr::headroom) ?: run {
+      Log.w(TAG, "Apple HDR gain map $item without maker note headroom")
+      return false
+    }
+    if (headroom <= 1.0) return false
+    Log.i(TAG, "Apple gain map item $item: ${heif.describe(item)}, headroom $headroom")
+    // The auxiliary image has no rotation of its own; it follows the primary image.
+    val turns = heif.rotation(item).takeIf { it != 0 } ?: heif.rotation(heif.primaryId)
+    val contents = decodeMonochrome(heif, item, turns, AppleHdr.lut(headroom))
+      ?: decodeItem(bytes, heif, item)?.let { orient(it, 0, turns) }?.let { AppleHdr.remap(it, headroom) }
+      ?: return false
+    base.gainmap = AppleHdr.gainmap(contents, headroom)
+    Log.i(TAG, "Attached Apple gain map ${contents.width}x${contents.height} to ${base.width}x${base.height}")
+    return true
+  }
+
+  /**
+   * Decodes a monochrome `hvc1` item or `grid` of them with libde265, rotated by [turns] (default: the item's own
+   * rotation) and with each value mapped through [lut] if given.
+   */
+  private fun decodeMonochrome(
+    heif: Heif,
+    itemId: Int,
+    turns: Int = heif.rotation(itemId),
+    lut: ByteArray? = null,
+  ): Bitmap? {
     val start = System.nanoTime()
     val (width, height, tiles, columns) = when (heif.items[itemId]?.type) {
       "hvc1" -> heif.size(itemId)?.let { (w, h) -> Grid(w, h, listOf(itemId), 1) }
@@ -83,7 +117,8 @@ internal object HeifGainmap {
       }
     }
 
-    val (rotated, w, h) = rotate(luma, width, height, heif.rotation(itemId))
+    if (lut != null) for (i in luma.indices) luma[i] = lut[luma[i].toInt() and 0xFF]
+    val (rotated, w, h) = rotate(luma, width, height, turns)
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ALPHA_8)
     val packed = if (bitmap.rowBytes == w) rotated else ByteArray(bitmap.rowBytes * h).also { out ->
       for (y in 0 until h) System.arraycopy(rotated, y * w, out, y * bitmap.rowBytes, w)
@@ -138,6 +173,135 @@ internal object HeifGainmap {
     // irot angles are anti-clockwise, Matrix rotations clockwise.
     val matrix = Matrix().apply { setRotate(-degrees.toFloat()) }
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+  }
+}
+
+/**
+ * Apple's pre-iOS 18 HDR gain maps, as documented by Apple ("Applying Apple HDR effect to your photos"): the HDR
+ * rendition is `sdr * (1 + (headroom - 1) * g)`, with `g` the sRGB-decoded gain map value and the headroom derived
+ * from maker note tags 33 and 48. Android's [Gainmap] interpolates gains logarithmically, so the values are remapped
+ * to `log(1 + (headroom - 1) * g) / log(headroom)` to give exactly the same result.
+ */
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+internal object AppleHdr {
+  fun lut(headroom: Double): ByteArray = ByteArray(256) { i ->
+    val v = i / 255.0
+    val linear = if (v <= 0.04045) v / 12.92 else ((v + 0.055) / 1.055).pow(2.4)
+    val encoded = ln(1 + (headroom - 1) * linear) / ln(headroom)
+    (encoded * 255).roundToInt().coerceIn(0, 255).toByte()
+  }
+
+  /** Remaps a gain map decoded by ImageDecoder into a single channel bitmap. */
+  fun remap(bitmap: Bitmap, headroom: Double): Bitmap {
+    val lut = lut(headroom)
+    val pixels = IntArray(bitmap.width * bitmap.height)
+    bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+    val out = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ALPHA_8)
+    val row = out.rowBytes
+    val data = ByteArray(row * bitmap.height)
+    for (y in 0 until bitmap.height) {
+      for (x in 0 until bitmap.width) data[y * row + x] = lut[pixels[y * bitmap.width + x] shr 8 and 0xFF]
+    }
+    out.copyPixelsFromBuffer(ByteBuffer.wrap(data))
+    return out
+  }
+
+  fun gainmap(contents: Bitmap, headroom: Double): Gainmap = Gainmap(contents).apply {
+    val max = headroom.toFloat()
+    setRatioMin(1f, 1f, 1f)
+    setRatioMax(max, max, max)
+    setGamma(1f, 1f, 1f)
+    setEpsilonSdr(0f, 0f, 0f)
+    setEpsilonHdr(0f, 0f, 0f)
+    minDisplayRatioForHdrTransition = 1f
+    displayRatioForFullHdr = max
+  }
+
+  /** The headroom from the Apple maker note in a HEIF `Exif` item, or null if it has no HDR values. */
+  fun headroom(exif: ByteArray): Double? {
+    if (exif.size < 8) return null
+    val tiff = 4 + ByteBuffer.wrap(exif).int
+    val makerNote = Tiff.find(exif, tiff, 0x927C) ?: return null
+    val (start, length) = makerNote
+    val header = "Apple iOS\u0000"
+    if (length < 16 || String(exif, start, header.length, Charsets.ISO_8859_1) != header) return null
+    val order = if (String(exif, start + 12, 2, Charsets.ISO_8859_1) == "II") {
+      java.nio.ByteOrder.LITTLE_ENDIAN
+    } else {
+      java.nio.ByteOrder.BIG_ENDIAN
+    }
+    val tags = Tiff.entries(exif, start + 14, start, order)
+    val maker33 = tags[33] ?: return null
+    val maker48 = tags[48] ?: return null
+    val stops = if (maker33 < 1.0) {
+      if (maker48 <= 0.01) -20.0 * maker48 + 1.8 else -0.101 * maker48 + 1.601
+    } else {
+      if (maker48 <= 0.01) -70.0 * maker48 + 3.0 else -0.303 * maker48 + 2.303
+    }
+    return 2.0.pow(max(stops, 0.0))
+  }
+}
+
+/** Minimal TIFF/EXIF reading for [AppleHdr]. */
+private object Tiff {
+  /** Offset and length of the value of [tag] in IFD0 or the EXIF IFD of the TIFF structure at [tiff]. */
+  fun find(data: ByteArray, tiff: Int, tag: Int): Pair<Int, Int>? {
+    if (tiff + 8 > data.size) return null
+    val order = if (data[tiff] == 'I'.code.toByte()) java.nio.ByteOrder.LITTLE_ENDIAN else java.nio.ByteOrder.BIG_ENDIAN
+    val b = ByteBuffer.wrap(data).order(order)
+    var ifd = tiff + b.getInt(tiff + 4)
+    repeat(2) {
+      var exifIfd = -1
+      if (ifd < 0 || ifd + 2 > data.size) return null
+      val count = b.getShort(ifd).toInt() and 0xFFFF
+      for (i in 0 until count) {
+        val entry = ifd + 2 + i * 12
+        if (entry + 12 > data.size) return null
+        val entryTag = b.getShort(entry).toInt() and 0xFFFF
+        val length = b.getInt(entry + 4)
+        val value = b.getInt(entry + 8)
+        if (entryTag == tag) return (if (length > 4) tiff + value else entry + 8) to length
+        if (entryTag == 0x8769) exifIfd = tiff + value
+      }
+      if (exifIfd < 0) return null
+      ifd = exifIfd
+    }
+    return null
+  }
+
+  /** Numeric values of the entries of the IFD at [ifd], with offsets relative to [base]. */
+  fun entries(data: ByteArray, ifd: Int, base: Int, order: java.nio.ByteOrder): Map<Int, Double> {
+    val b = ByteBuffer.wrap(data).order(order)
+    if (ifd + 2 > data.size) return emptyMap()
+    val result = mutableMapOf<Int, Double>()
+    val count = b.getShort(ifd).toInt() and 0xFFFF
+    for (i in 0 until count) {
+      val entry = ifd + 2 + i * 12
+      if (entry + 12 > data.size) break
+      val tag = b.getShort(entry).toInt() and 0xFFFF
+      val type = b.getShort(entry + 2).toInt() and 0xFFFF
+      val pointer = base + b.getInt(entry + 8)
+      fun rational(signed: Boolean): Double? {
+        if (pointer < 0 || pointer + 8 > data.size) return null
+        val n = b.getInt(pointer)
+        val d = b.getInt(pointer + 4)
+        val num = if (signed) n.toDouble() else n.toUInt().toDouble()
+        val den = if (signed) d.toDouble() else d.toUInt().toDouble()
+        return if (den == 0.0) null else num / den
+      }
+      val value = when (type) {
+        3 -> (b.getShort(entry + 8).toInt() and 0xFFFF).toDouble()
+        4 -> b.getInt(entry + 8).toUInt().toDouble()
+        8 -> b.getShort(entry + 8).toDouble()
+        9 -> b.getInt(entry + 8).toDouble()
+        11 -> b.getFloat(entry + 8).toDouble()
+        5 -> rational(false)
+        10 -> rational(true)
+        else -> null
+      }
+      if (value != null) result[tag] = value
+    }
+    return result
   }
 }
 
@@ -241,6 +405,14 @@ private class Heif(
       if (propertyType == type) return bytes.copyOfRange(range.first, range.last + 1)
     }
     return null
+  }
+
+  /** The `auxC` type URN of an auxiliary image item, e.g. Apple's HDR gain map. */
+  fun auxType(id: Int): String? {
+    val auxC = property(id, "auxC") ?: return null
+    if (auxC.size <= 4) return null
+    val end = (4 until auxC.size).firstOrNull { auxC[it] == 0.toByte() } ?: auxC.size
+    return String(auxC, 4, end - 4, Charsets.ISO_8859_1)
   }
 
   fun size(id: Int): Pair<Int, Int>? {
