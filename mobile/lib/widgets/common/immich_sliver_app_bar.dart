@@ -300,6 +300,12 @@ class _SyncStatusIndicatorState extends ConsumerState<_SyncStatusIndicator> with
     super.initState();
     _rotationController = AnimationController(duration: const Duration(seconds: 2), vsync: this);
     _dismissalController = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
+    // fork: rebuild once dismissed, so the hidden indicator stops taking space in the app bar
+    _dismissalController.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() {});
+      }
+    });
     _rotationAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_rotationController);
     _dismissalAnimation = Tween<double>(
       begin: 1.0,
