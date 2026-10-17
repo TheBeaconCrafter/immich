@@ -23,9 +23,6 @@ const _maxDecodeSize = 4096;
 // Crossfade from the SDR image to an HDR rendition that had to be loaded first; cached ones appear instantly.
 const _revealDuration = Duration(milliseconds: 180);
 
-// iOS: lets hero and page transitions finish before the native view is created.
-const _activationDelay = Duration(milliseconds: 400);
-
 const _candidateExtensions = {'jpg', 'jpeg', 'heic', 'heif', 'hif', 'avif'};
 
 final _log = Logger('HdrImageOverlay');
@@ -44,9 +41,9 @@ final hdrDisplaySupportedProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-/// Decodes the HDR rendition of [asset] in the background, so swiping to it shows HDR right away (Android).
+/// Decodes the HDR rendition of [asset] in the background, so swiping to it shows HDR right away.
 void preloadHdrRendition(BaseAsset? asset) {
-  if (asset == null || !Platform.isAndroid || !_supported || !SettingsRepository.instance.appConfig.image.hdr) {
+  if (asset == null || !_supported || !SettingsRepository.instance.appConfig.image.hdr) {
     return;
   }
   final source = _hdrSource(asset);
@@ -113,10 +110,7 @@ class HdrImageOverlay extends ConsumerStatefulWidget {
   final BaseAsset asset;
   final PhotoViewControllerBase? controller;
 
-  /// iOS only embeds a native view for the page in view; Android shows every visible page in HDR.
-  final bool isActive;
-
-  const HdrImageOverlay({super.key, required this.asset, required this.controller, required this.isActive});
+  const HdrImageOverlay({super.key, required this.asset, required this.controller});
 
   @override
   ConsumerState<HdrImageOverlay> createState() => _HdrImageOverlayState();
@@ -124,7 +118,6 @@ class HdrImageOverlay extends ConsumerStatefulWidget {
 
 class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTickerProviderStateMixin {
   late final AnimationController _reveal;
-  Timer? _activationTimer;
   bool _activated = false;
   bool _isSdr = false;
   StreamSubscription<PhotoViewControllerValue>? _controllerSub;
@@ -133,9 +126,11 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTi
   // iOS: per-view channel of the embedded platform view.
   MethodChannel? _viewChannel;
 
-  // Android: activation follows the route animation; the token identifies this page's native layer slot, and
-  // _ready says its HDR rendition is drawn and can be revealed.
+  // Activation follows the route animation, so HDR starts once the viewer finished opening.
   Animation<double>? _routeAnimation;
+
+  // Android: the token identifies this page's native layer slot; _ready says its HDR rendition is drawn and can
+  // be revealed.
   int? _token;
   bool _ready = false;
   double _devicePixelRatio = 1.0;
@@ -147,7 +142,6 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTi
     super.initState();
     _reveal = AnimationController(vsync: this, duration: _revealDuration);
     _attachController();
-    _scheduleActivation();
   }
 
   @override
@@ -158,22 +152,13 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTi
     }
     if (oldWidget.asset.heroTag != widget.asset.heroTag) {
       _isSdr = false;
-      if (!Platform.isAndroid) {
-        _activated = false;
-      }
       _release();
-    }
-    if (oldWidget.isActive != widget.isActive || oldWidget.asset.heroTag != widget.asset.heroTag) {
-      _scheduleActivation();
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!Platform.isAndroid) {
-      return;
-    }
     final animation = ModalRoute.of(context)?.animation;
     if (animation != _routeAnimation) {
       _routeAnimation?.removeStatusListener(_onRouteStatus);
@@ -182,7 +167,7 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTi
     }
   }
 
-  /// Android pages show HDR once the viewer finished opening (the hero flight) and until it starts closing.
+  /// Pages show HDR once the viewer finished opening (the hero flight) and until it starts closing.
   void _onRouteStatus(AnimationStatus status) {
     final active = status == AnimationStatus.completed;
     if (active == _activated || !mounted) {
@@ -198,7 +183,6 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTi
   void dispose() {
     _reveal.dispose();
     _routeAnimation?.removeStatusListener(_onRouteStatus);
-    _activationTimer?.cancel();
     unawaited(_controllerSub?.cancel());
     _release();
     super.dispose();
@@ -211,28 +195,6 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTi
     _controllerSub = controller?.outputStateStream.listen((value) {
       if (mounted) {
         setState(() => _value = value);
-      }
-    });
-  }
-
-  void _scheduleActivation() {
-    if (Platform.isAndroid) {
-      return;
-    }
-    _activationTimer?.cancel();
-    if (!widget.isActive) {
-      if (_activated) {
-        setState(() => _activated = false);
-        _release();
-      }
-      return;
-    }
-    if (_activated) {
-      return;
-    }
-    _activationTimer = Timer(_activationDelay, () {
-      if (mounted && widget.isActive) {
-        setState(() => _activated = true);
       }
     });
   }

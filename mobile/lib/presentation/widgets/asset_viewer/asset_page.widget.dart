@@ -502,7 +502,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                 // fork: Ultra HDR viewer
                 if (displayAsset.isImage && !isPlayingMotionVideo && viewIntentFilePath == null)
                   Positioned.fill(
-                    child: HdrImageOverlay(asset: displayAsset, controller: _viewController, isActive: isCurrent),
+                    child: HdrImageOverlay(asset: displayAsset, controller: _viewController),
                   ),
                 if (showingOcr && displayAsset.width != null && displayAsset.height != null)
                   Positioned.fill(
