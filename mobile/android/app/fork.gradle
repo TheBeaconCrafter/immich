@@ -16,7 +16,20 @@ def forkAppId = forkValue('IMMICH_APP_ID')
 def forkAppName = forkValue('IMMICH_APP_NAME')
 
 android {
+  // Native HEVC decoder (libde265, LGPL) for iPhone HEIC gain maps; see hdr-native/.
+  externalNativeBuild {
+    cmake {
+      path "../hdr-native/CMakeLists.txt"
+      version "3.22.1"
+    }
+  }
+
   defaultConfig {
+    externalNativeBuild {
+      cmake {
+        arguments "-DANDROID_STL=c++_static"
+      }
+    }
     if (forkAppId) {
       applicationId forkAppId
     }
