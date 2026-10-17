@@ -33,7 +33,7 @@ Flutter 3.47. So HDR photos are drawn natively, exactly where the normal Flutter
 | Dart overlay. It mirrors the PhotoView zoom/pan transform, is active only for the page in view, and steps aside for SDR photos. | `mobile/lib/presentation/widgets/asset_viewer/hdr_image_overlay.widget.dart` |
 | Android: an `ImageView` in the activity window, *below* a transparent Flutter surface. Flutter clears the photo area once the HDR rendition is drawn and streams the photo's on-screen rect every frame. The window switches to `COLOR_MODE_HDR` while an HDR photo is on screen. | `mobile/android/app/src/main/kotlin/app/alextran/immich/hdr/` |
 | iOS: a `UIImageView` with `preferredImageDynamicRange = .high`. Decoding uses ImageIO's `kCGImageSourceDecodeToHDR` on iOS 18 and `UIImageReader` on iOS 17. | `mobile/ios/Runner/Core/Hdr/HdrImagePlugin.swift` |
-| Setting: *Settings → Asset viewer → Display HDR photos* (on by default). | `mobile/lib/widgets/settings/asset_viewer_settings/image_viewer_hdr_setting.dart` |
+| Setting: *Settings → Experimental → Display HDR photos* (on by default). | `mobile/lib/widgets/settings/experimental_settings.dart` |
 
 Behaviour:
 
@@ -89,9 +89,28 @@ These are the only edits to upstream files:
 - `asset_page.widget.dart`: adds the overlay to the page's `Stack`.
 - `asset_preloader.dart`: preloads the HDR renditions of the neighbouring photos.
 - `settings_key.dart`, `image_config.dart` and `app_config.dart`: add the `imageHdr` setting.
-- `asset_viewer_settings.dart`: lists the setting tile.
 
 The setting's strings are hard-coded English, so there are no edits to `i18n/en.json`.
+
+## Experimental settings (branch `feat/experimental-settings`)
+
+*Settings → Experimental* collects the fork's toggles:
+
+| Setting | Platforms | Default |
+| --- | --- | --- |
+| Display HDR photos | Android, iOS | on |
+| Material You theming: colors the app from the wallpaper, using Android's tonal spot palette | Android | on |
+| Floating tab bar: a Google Photos style pill with the tabs and a separate round search button | Android | off |
+
+Code: `mobile/lib/widgets/settings/experimental_settings.dart`, `mobile/lib/theme/material_you.dart` and
+`mobile/lib/widgets/common/floating_tab_bar.dart`.
+
+Upstream touch points (each marked `fork:`):
+
+- `settings.page.dart`: the Experimental section.
+- `settings_key.dart`, `theme_config.dart` and `app_config.dart`: the setting keys.
+- `theme.provider.dart`: Material You.
+- `tab_shell.page.dart`: the floating tab bar.
 
 ## Building and running
 

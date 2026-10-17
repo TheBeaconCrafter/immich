@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -13,9 +14,11 @@ import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/widgets/common/floating_tab_bar.dart';
 
 @RoutePage()
 class TabShellPage extends ConsumerStatefulWidget {
@@ -87,6 +90,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
           onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
           child: Scaffold(
             resizeToAvoidBottomInset: false,
+            extendBody: _useFloatingTabBar(ref), // fork: floating tab bar
             body: isScreenLandscape
                 ? Row(
                     children: [
@@ -103,6 +107,10 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
     );
   }
 }
+
+// fork: floating tab bar (experimental setting, Android)
+bool _useFloatingTabBar(WidgetRef ref) =>
+    Platform.isAndroid && ref.watch(appConfigProvider.select((config) => config.theme.floatingTabBar));
 
 void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
   // On Photos page menu tapped
@@ -171,6 +179,16 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
 
     if (isScreenLandscape || hideNavigationBar) {
       return const SizedBox.shrink();
+    }
+
+    // fork: floating tab bar
+    if (_useFloatingTabBar(ref)) {
+      return FloatingTabBar(
+        destinations: widget.destinations.cast<NavigationDestination>(),
+        selectedIndex: widget.tabsRouter.activeIndex,
+        searchIndex: kSearchTabIndex,
+        onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
+      );
     }
 
     return NavigationBar(

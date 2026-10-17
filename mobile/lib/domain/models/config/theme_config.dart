@@ -12,5 +12,8 @@ abstract class ThemeConfig with _$ThemeConfig {
     @Default(ImmichColorPreset.indigo) ImmichColorPreset primaryColor,
     @Default(false) bool dynamicTheme,
     @Default(true) bool colorfulInterface,
+    // fork: experimental settings
+    @Default(true) bool materialYou,
+    @Default(false) bool floatingTabBar,
   }) = _ThemeConfig;
 }

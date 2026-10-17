@@ -9,6 +9,7 @@ import 'package:immich_mobile/widgets/settings/asset_list_settings/asset_list_se
 import 'package:immich_mobile/widgets/settings/asset_viewer_settings/asset_viewer_settings.dart';
 import 'package:immich_mobile/widgets/settings/backup_settings/backup_settings.dart';
 import 'package:immich_mobile/widgets/settings/beta_sync_settings/sync_status_and_actions.dart';
+import 'package:immich_mobile/widgets/settings/experimental_settings.dart';
 import 'package:immich_mobile/widgets/settings/free_up_space_settings.dart';
 import 'package:immich_mobile/widgets/settings/language_settings.dart';
 import 'package:immich_mobile/widgets/settings/networking_settings/networking_settings.dart';
@@ -26,6 +27,7 @@ enum SettingSection {
   notifications(Icons.notifications_none_rounded),
   preferences(Icons.interests_outlined),
   timeline(Icons.auto_awesome_mosaic_outlined),
+  experimental(Icons.science_outlined), // fork: experimental settings
   beta(Icons.sync_outlined);
 
   final IconData icon;
@@ -40,6 +42,7 @@ enum SettingSection {
     SettingSection.notifications => t.notifications,
     SettingSection.preferences => t.preferences_settings_title,
     SettingSection.timeline => t.asset_list_settings_title,
+    SettingSection.experimental => 'Experimental',
     SettingSection.beta => t.sync_status,
   };
 
@@ -53,6 +56,7 @@ enum SettingSection {
     SettingSection.notifications => t.setting_notifications_subtitle,
     SettingSection.preferences => t.preferences_settings_subtitle,
     SettingSection.timeline => t.asset_list_settings_subtitle,
+    SettingSection.experimental => 'HDR photos and other features in testing',
     SettingSection.beta => t.sync_status_subtitle,
   };
 
@@ -66,6 +70,7 @@ enum SettingSection {
     SettingSection.notifications => const NotificationSetting(),
     SettingSection.preferences => const PreferenceSetting(),
     SettingSection.timeline => const AssetListSettings(),
+    SettingSection.experimental => const ExperimentalSettings(),
     SettingSection.beta => const SyncStatusAndActions(),
   };
 
