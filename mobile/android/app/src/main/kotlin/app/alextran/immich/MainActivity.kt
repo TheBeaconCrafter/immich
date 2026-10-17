@@ -77,6 +77,7 @@ class MainActivity : FlutterFragmentActivity() {
 
       flutterEngine.plugins.add(ViewIntentPlugin())
       flutterEngine.plugins.add(HdrImagePlugin()) // fork: Ultra HDR viewer
+      flutterEngine.plugins.add(app.alextran.immich.theme.MaterialYouPlugin()) // fork: Material You theming
       flutterEngine.plugins.add(backgroundEngineLockImpl)
       flutterEngine.plugins.add(nativeSyncApiImpl)
       flutterEngine.plugins.add(permissionApiImpl)

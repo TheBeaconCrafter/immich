@@ -34,7 +34,8 @@ class LibraryPage extends StatelessWidget {
           ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
           _ActionButtonGrid(),
           _CollectionCards(),
-          _QuickAccessButtonList(),
+          // fork: keeps the last entries clear of floating tab bars, which scroll content underneath
+          SliverSafeArea(top: false, sliver: _QuickAccessButtonList()),
         ],
       ),
     );

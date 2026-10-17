@@ -10,6 +10,7 @@ import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/theme.provider.dart';
 import 'package:immich_mobile/theme/color_scheme.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
+import 'package:immich_mobile/theme/material_you.dart';
 import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 
 class PrimaryColorSetting extends HookConsumerWidget {
@@ -21,6 +22,8 @@ class PrimaryColorSetting extends HookConsumerWidget {
     final themeConfig = ref.watch(appConfigProvider.select((config) => config.theme));
 
     const tileSize = 55.0;
+    // fork: Material You theming (experimental setting) overrides the colors chosen here
+    final materialYouActive = themeConfig.materialYou && materialYouAvailable;
 
     void popBottomSheet() {
       Future.delayed(const Duration(milliseconds: 200), () {
@@ -143,6 +146,7 @@ class PrimaryColorSetting extends HookConsumerWidget {
     }
 
     return ListTile(
+      enabled: !materialYouActive, // fork: Material You theming
       onTap: () => showGlassModalBottomSheet(
         // fork: Liquid Glass on iOS
         context: context,
@@ -152,33 +156,40 @@ class PrimaryColorSetting extends HookConsumerWidget {
         },
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      title: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.t.theme_setting_primary_color_title,
-                  style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  context.t.theme_setting_primary_color_subtitle,
-                  style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceSecondary),
-                ),
-              ],
+      // fork: Material You theming
+      title: Opacity(
+        opacity: materialYouActive ? 0.5 : 1,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.t.theme_setting_primary_color_title,
+                    style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    // fork: Material You theming
+                    materialYouActive
+                        ? 'Set by Material You in Experimental settings'
+                        : context.t.theme_setting_primary_color_subtitle,
+                    style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceSecondary),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 8.0),
-            child: buildPrimaryColorTile(
-              topColor: themeProvider.light.primary,
-              bottomColor: themeProvider.dark.primary,
-              tileSize: 42.0,
-              showSelector: false,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 8.0),
+              child: buildPrimaryColorTile(
+                topColor: themeProvider.light.primary,
+                bottomColor: themeProvider.dark.primary,
+                tileSize: 42.0,
+                showSelector: false,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

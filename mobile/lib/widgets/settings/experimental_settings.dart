@@ -31,7 +31,9 @@ class ExperimentalSettings extends StatelessWidget {
           _ToggleSetting(
             setting: .themeMaterialYou,
             title: 'Material You theming',
-            subtitle: "Color the whole app from your device's wallpaper colors.",
+            subtitle:
+                "Use your device's Material You colors, including its color style such as monochrome. Replaces the "
+                'primary color setting.',
           ),
           _ToggleSetting(
             setting: .themeFloatingTabBar,

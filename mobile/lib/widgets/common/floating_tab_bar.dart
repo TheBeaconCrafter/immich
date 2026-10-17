@@ -40,18 +40,22 @@ class FloatingTabBar extends StatelessWidget {
               colors: colors,
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final (index, destination) in destinations.indexed)
-                      if (index != searchIndex)
-                        _Tab(
-                          destination: destination,
-                          selected: index == selectedIndex,
-                          colors: colors,
-                          onTap: () => onDestinationSelected(index),
-                        ),
-                  ],
+                // Shrinks the tabs on narrow screens or with large text instead of cutting off the last one.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final (index, destination) in destinations.indexed)
+                        if (index != searchIndex)
+                          _Tab(
+                            destination: destination,
+                            selected: index == selectedIndex,
+                            colors: colors,
+                            onTap: () => onDestinationSelected(index),
+                          ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -137,7 +141,7 @@ class _Tab extends StatelessWidget {
         duration: _duration,
         curve: Curves.easeOutCubic,
         height: _barHeight - 16,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: ShapeDecoration(
           shape: const StadiumBorder(),
           color: selected ? colors.secondaryContainer : Colors.transparent,
