@@ -35,10 +35,13 @@ internal object HdrCache {
     budget = minOf(512L * 1024 * 1024, memory.totalMem / 10)
   }
 
-  /** Calls [onResult] with the HDR rendition, `null` for SDR photos, or a failure. */
-  fun get(source: Source, onResult: (Result<Bitmap?>) -> Unit) {
-    entries[source.key]?.let { return onResult(Result.success(it.bitmap)) }
-    load(source, background = false, onResult)
+  /**
+   * Calls [onResult] with the HDR rendition, `null` for SDR photos, or a failure, and whether it was already
+   * cached (synchronously) rather than loaded.
+   */
+  fun get(source: Source, onResult: (Result<Bitmap?>, cached: Boolean) -> Unit) {
+    entries[source.key]?.let { return onResult(Result.success(it.bitmap), true) }
+    load(source, background = false) { onResult(it, false) }
   }
 
   fun preload(source: Source) {

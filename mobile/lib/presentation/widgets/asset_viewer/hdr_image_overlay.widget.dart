@@ -20,6 +20,9 @@ const _channel = MethodChannel('immich/hdr_image');
 
 const _maxDecodeSize = 4096;
 
+// Crossfade from the SDR image to an HDR rendition that had to be loaded first; cached ones appear instantly.
+const _revealDuration = Duration(milliseconds: 180);
+
 // iOS: lets hero and page transitions finish before the native view is created.
 const _activationDelay = Duration(milliseconds: 400);
 
@@ -119,7 +122,8 @@ class HdrImageOverlay extends ConsumerStatefulWidget {
   ConsumerState<HdrImageOverlay> createState() => _HdrImageOverlayState();
 }
 
-class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
+class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> with SingleTickerProviderStateMixin {
+  late final AnimationController _reveal;
   Timer? _activationTimer;
   bool _activated = false;
   bool _isSdr = false;
@@ -141,6 +145,7 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
   @override
   void initState() {
     super.initState();
+    _reveal = AnimationController(vsync: this, duration: _revealDuration);
     _attachController();
     _scheduleActivation();
   }
@@ -191,6 +196,7 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
 
   @override
   void dispose() {
+    _reveal.dispose();
     _routeAnimation?.removeStatusListener(_onRouteStatus);
     _activationTimer?.cancel();
     unawaited(_controllerSub?.cancel());
@@ -267,14 +273,18 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
   }
 
   void _showOnNativeLayer(Map<String, Object> source) {
-    final token = _token = _HdrLayer.instance.show(source, _photoRect, (isHdr) {
+    final token = _token = _HdrLayer.instance.show(source, _photoRect, (isHdr, cached) {
       if (!mounted || _token == null) {
         return;
       }
-      if (isHdr) {
-        setState(() => _ready = true);
-      } else {
+      if (!isHdr) {
         _markSdr();
+        return;
+      }
+      _reveal.value = cached ? 1.0 : 0.0;
+      setState(() => _ready = true);
+      if (!cached) {
+        unawaited(_reveal.forward());
       }
     });
     _log.fine('Requested HDR rendition $token for ${widget.asset.name}');
@@ -317,7 +327,7 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
       return IgnorePointer(
         child: Align(
           alignment: Alignment.topLeft,
-          child: CustomPaint(size: boundaries.outerSize, painter: const _ClearPainter()),
+          child: CustomPaint(size: boundaries.outerSize, painter: _RevealPainter(_reveal)),
         ),
       );
     }
@@ -401,15 +411,23 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
   }
 }
 
-/// Clears everything Flutter painted below it, revealing the native HDR layer.
-class _ClearPainter extends CustomPainter {
-  const _ClearPainter();
+/// Makes everything Flutter painted below it transparent by [progress], revealing the native HDR layer.
+class _RevealPainter extends CustomPainter {
+  final Animation<double> progress;
+
+  _RevealPainter(this.progress) : super(repaint: progress);
 
   @override
-  void paint(Canvas canvas, Size size) => canvas.drawRect(Offset.zero & size, Paint()..blendMode = BlendMode.clear);
+  void paint(Canvas canvas, Size size) {
+    // dstOut scales the destination's alpha by (1 - source alpha); at 1.0 it equals BlendMode.clear.
+    final paint = Paint()
+      ..color = Color.fromRGBO(0, 0, 0, progress.value)
+      ..blendMode = BlendMode.dstOut;
+    canvas.drawRect(Offset.zero & size, paint);
+  }
 
   @override
-  bool shouldRepaint(_ClearPainter oldDelegate) => false;
+  bool shouldRepaint(_RevealPainter oldDelegate) => oldDelegate.progress != progress;
 }
 
 /// Android's native HDR layer. Each visible page owns a slot identified by a token; slot rects are mirrored
@@ -423,7 +441,7 @@ class _HdrLayer {
   final _slots = <int, _Slot>{};
   bool _frameCallbackAdded = false;
 
-  int show(Map<String, Object> source, Rect? Function() rectSource, void Function(bool isHdr) onResult) {
+  int show(Map<String, Object> source, Rect? Function() rectSource, void Function(bool isHdr, bool cached) onResult) {
     final token = ++_nextToken;
     final slot = _slots[token] = _Slot(rectSource);
     if (!_frameCallbackAdded) {
@@ -438,11 +456,11 @@ class _HdrLayer {
             if (result?['error'] != null) {
               _log.fine('HDR load failed: ${result!['error']}');
             }
-            onResult(result?['hdr'] == true);
+            onResult(result?['hdr'] == true, result?['cached'] == true);
           })
           .catchError((Object e, StackTrace stack) {
             _log.warning('HDR show failed', e, stack);
-            onResult(false);
+            onResult(false, false);
           }),
     );
     _syncRect(token, slot);

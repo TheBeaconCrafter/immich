@@ -169,7 +169,7 @@ private class HdrHost(private val activity: Activity) {
     })
     slots[token] = slot
 
-    HdrCache.get(source) { result ->
+    HdrCache.get(source) { result, cached ->
       if (slots[token] !== slot) return@get onResult(mapOf("hdr" to false))
       val bitmap = result.getOrElse {
         hide(token)
@@ -187,7 +187,9 @@ private class HdrHost(private val activity: Activity) {
       container.visibility = View.VISIBLE
       setWindowHdr(true)
       // Reply once the photo has been drawn, so Flutter never reveals an empty layer.
-      container.postOnAnimation { container.post { if (slots[token] === slot) onResult(mapOf("hdr" to true)) } }
+      container.postOnAnimation {
+        container.post { if (slots[token] === slot) onResult(mapOf("hdr" to true, "cached" to cached)) }
+      }
     }
   }
 

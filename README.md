@@ -1,3 +1,9 @@
+> [!NOTE]
+> **This is a fork of [Immich](https://github.com/immich-app/immich)** that adds Ultra HDR image rendering to the
+> mobile app: HDR gain map photos (Android Ultra HDR, iPhone HDR) are shown with their full brightness range on
+> Android and iOS. See [FORK.md](FORK.md) for details and build instructions. For everything else, use the
+> [official repository](https://github.com/immich-app/immich).
+
 <p align="center"> 
   <br/>
   <a href="https://opensource.org/license/agpl-v3"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg?color=3F51B5&style=for-the-badge&label=License&logoColor=000000&labelColor=ececec" alt="License: AGPLv3"></a>
