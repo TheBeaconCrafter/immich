@@ -29,6 +29,13 @@ class ExperimentalSettings extends StatelessWidget {
         ),
         if (Platform.isAndroid) ...const [
           _ToggleSetting(
+            setting: .imageHdrVideo,
+            title: 'Play HDR videos in HDR',
+            subtitle:
+                'Play HDR videos, such as iPhone Dolby Vision videos, from the original file on HDR displays. The '
+                "server's converted copies are SDR. Uses more data.",
+          ),
+          _ToggleSetting(
             setting: .themeMaterialYou,
             title: 'Material You theming',
             subtitle:

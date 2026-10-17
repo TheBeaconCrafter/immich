@@ -10,5 +10,6 @@ abstract class ImageConfig with _$ImageConfig {
     @Default(false) bool loadOriginal,
     // fork: Ultra HDR viewer
     @Default(true) bool hdr,
+    @Default(true) bool hdrVideo,
   }) = _ImageConfig;
 }

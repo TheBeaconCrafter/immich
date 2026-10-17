@@ -41,14 +41,23 @@ final hdrDisplaySupportedProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-/// Whether videos should play from the original file: the server's transcodes are tone-mapped to SDR, so on
-/// Android's HDR viewer an iPhone Dolby Vision or HLG video would otherwise lose its highlights. (iOS plays HDR
-/// videos from the photo library or as streamed by AVPlayer already.)
-Future<bool> playOriginalHdrVideo(WidgetRef ref) async {
-  if (!Platform.isAndroid || !ref.read(appConfigProvider).image.hdr) {
+final _hdrDisplayProvider = FutureProvider<bool>((ref) async {
+  try {
+    return await _channel.invokeMethod<bool>('isHdrDisplay') ?? false;
+  } catch (e, stack) {
+    _log.warning('Failed to query the HDR display', e, stack);
     return false;
   }
-  return ref.read(hdrDisplaySupportedProvider.future);
+});
+
+/// Whether videos should play from the original file: the server's transcodes are tone-mapped to SDR, so on an
+/// Android HDR display an iPhone Dolby Vision or HLG video would otherwise lose its highlights. (iOS plays HDR
+/// videos from the photo library or as streamed by AVPlayer already.)
+Future<bool> playOriginalHdrVideo(WidgetRef ref) async {
+  if (!Platform.isAndroid || !ref.read(appConfigProvider).image.hdrVideo) {
+    return false;
+  }
+  return ref.read(_hdrDisplayProvider.future);
 }
 
 /// Decodes the HDR rendition of [asset] in the background, so swiping to it shows HDR right away.

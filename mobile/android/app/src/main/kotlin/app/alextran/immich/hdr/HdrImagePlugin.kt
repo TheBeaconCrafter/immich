@@ -31,6 +31,7 @@ class HdrImagePlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
 
   private var channel: MethodChannel? = null
   private var host: HdrHost? = null
+  private var hdrDisplay = false
 
   override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     HdrImageLoader.initialize(binding.applicationContext)
@@ -50,6 +51,7 @@ class HdrImagePlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
 
   private fun attach(activity: Activity) {
     detach()
+    hdrDisplay = HdrMode.isDisplayCapable(activity)
     if (HdrMode.isActive(activity)) {
       host = HdrHost(activity)
     }
@@ -69,6 +71,7 @@ class HdrImagePlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
   override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
     when (call.method) {
       "isSupported" -> result.success(host != null)
+      "isHdrDisplay" -> result.success(hdrDisplay)
       "setEnabled" -> {
         HdrMode.setEnabled(HdrImageLoader.context, call.arguments as? Boolean ?: true)
         result.success(null)
@@ -131,7 +134,7 @@ object HdrMode {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, enabled).apply()
   }
 
-  private fun isDisplayCapable(activity: Activity): Boolean {
+  fun isDisplayCapable(activity: Activity): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
     val display = activity.display ?: return false
     return display.isHdrSdrRatioAvailable
