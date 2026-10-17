@@ -93,6 +93,66 @@ These are the only edits to upstream files:
 
 The setting's strings are hard-coded English, so there are no edits to `i18n/en.json`.
 
+## Building and running
+
+All commands run from the `mobile/` folder. The toolchain (Flutter, Java, Rust) is pinned by mise.
+
+### One-time setup
+
+```bash
+brew install mise cocoapods
+cd mobile
+mise install          # Flutter, Java, Rust in the pinned versions
+mise run install      # Dart packages + CocoaPods
+mise run codegen      # generated code (API client, translations, Pigeon, ...)
+```
+
+If `pod install` fails with an encoding error, run `export LANG=en_US.UTF-8` first.
+
+Give the fork its own identity, so it installs next to the official app (see
+[Installing next to the official app](#installing-next-to-the-official-app)):
+
+```bash
+scripts/configure-fork.sh --id com.example.immich.hdr --name "Immich HDR" --team ABCDE12345
+```
+
+### Android
+
+Connect the phone with USB debugging enabled, then:
+
+```bash
+mise exec -- flutter run --release           # build, install and start on the connected phone
+mise exec -- flutter build apk --release     # just build: build/app/outputs/flutter-apk/app-release.apk
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+Without `android/key.jks` + `android/key.properties`, release builds are signed with this Mac's debug key. Updates
+then only install over builds signed with the same key.
+
+HDR needs Android 14+ and an HDR display. `adb logcat | grep -E "HdrHost|HdrCache|HeifGainmap"` shows what the
+HDR viewer does.
+
+### iOS
+
+Simulator, no signing needed:
+
+```bash
+open -a Simulator
+mise exec -- flutter devices                 # find the simulator's name or id
+mise exec -- flutter run -d "iPhone 16 Pro"
+```
+
+On an iPhone, you need a paid Apple developer team (`--team` above). Connect and unlock the phone, enable
+*Developer Mode* (Settings → Privacy & Security), then:
+
+```bash
+open ios/Runner.xcworkspace                  # once: let Xcode set up signing for the Runner, Share and Widget targets
+mise exec -- flutter run -d <iphone-id> --release
+mise exec -- flutter build ipa --export-method development   # installable .ipa in build/ios/ipa/
+```
+
+The simulator runs the app, but HDR brightness needs a real iPhone on iOS 17+ (iOS 18+ for Android-made Ultra HDR).
+
 ## Installing next to the official app
 
 You can give the build its own bundle ID and app name, so it installs alongside the official Immich app:
