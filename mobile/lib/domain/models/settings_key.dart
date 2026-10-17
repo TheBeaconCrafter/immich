@@ -13,6 +13,8 @@ enum SettingsKey<T> {
   themeMode<ThemeMode>(codec: EnumCodec(ThemeMode.values)),
   themeDynamic<bool>(),
   themeColorfulInterface<bool>(),
+  themeMaterialYou<bool>(), // fork: experimental settings
+  themeFloatingTabBar<bool>(), // fork: experimental settings
 
   // Image
   imagePreferRemote<bool>(),
