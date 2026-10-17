@@ -62,7 +62,8 @@ private final class TouchTransparentView: UIView {
   override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? { nil }
 }
 
-/// Creation params: `radius` (points, negative for a capsule), `topOnly` (round only the top corners).
+/// Creation params: `radius` (points, negative for a capsule), `topOnly` (round only the top corners), `clear` (no
+/// material at all, only a layer break for Flutter content drawn on top).
 private final class GlassSurfaceView: NSObject, FlutterPlatformView {
   private let container = TouchTransparentView()
   private let effectView: UIVisualEffectView
@@ -77,8 +78,9 @@ private final class GlassSurfaceView: NSObject, FlutterPlatformView {
     effectView.frame = container.bounds
     effectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     effectView.isUserInteractionEnabled = false
-    container.addSubview(effectView)
     super.init()
+    if params["clear"] as? Bool == true { return }
+    container.addSubview(effectView)
 
     let radius = (params["radius"] as? NSNumber)?.doubleValue ?? 0
     let topOnly = params["topOnly"] as? Bool == true
@@ -113,7 +115,7 @@ private final class GlassSurfaceView: NSObject, FlutterPlatformView {
 /// Presents a native UIMenu at a rect of the Flutter view (`menu.show` → {x, y, width, height, items}), reporting a
 /// pick through `menu.select`. It uses a hidden UIKit button outside Flutter's view tree: a platform view in Flutter's
 /// touch path can deadlock all touches when it shares the screen with other platform views, such as the video player.
-/// Items: {id, title, image?, destructive, disabled} or {divider: true}.
+/// Items: {id, title, image?, destructive, disabled}, {divider: true} or {header: title}.
 private final class NativeMenuPresenter: NSObject {
   /// Reports when its menu closes, with or without a pick.
   private final class MenuButton: UIButton {
@@ -176,10 +178,18 @@ private final class NativeMenuPresenter: NSObject {
   }
 
   private func elements(from items: [[String: Any]]) -> [UIMenuElement] {
-    var sections: [[UIMenuElement]] = [[]]
+    var sections: [(title: String, elements: [UIMenuElement])] = [("", [])]
     for item in items {
       if item["divider"] as? Bool == true {
-        sections.append([])
+        sections.append(("", []))
+        continue
+      }
+      if let header = item["header"] as? String {
+        if sections[sections.count - 1].elements.isEmpty {
+          sections[sections.count - 1].title = header
+        } else {
+          sections.append((header, []))
+        }
         continue
       }
       let id = (item["id"] as? NSNumber)?.intValue ?? 0
@@ -191,11 +201,11 @@ private final class NativeMenuPresenter: NSObject {
       }
       if item["destructive"] as? Bool == true { action.attributes.insert(.destructive) }
       if item["disabled"] as? Bool == true { action.attributes.insert(.disabled) }
-      sections[sections.count - 1].append(action)
+      sections[sections.count - 1].elements.append(action)
     }
-    let nonEmpty = sections.filter { !$0.isEmpty }
-    if nonEmpty.count <= 1 { return nonEmpty.first ?? [] }
-    return nonEmpty.map { UIMenu(options: .displayInline, children: $0) }
+    let nonEmpty = sections.filter { !$0.elements.isEmpty }
+    if nonEmpty.count == 1, nonEmpty[0].title.isEmpty { return nonEmpty[0].elements }
+    return nonEmpty.map { UIMenu(title: $0.title, options: .displayInline, children: $0.elements) }
   }
 }
 

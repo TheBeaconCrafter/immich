@@ -10,6 +10,7 @@ import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/actions/edit_location.action.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/sheet_tile.widget.dart';
 import 'package:immich_mobile/widgets/asset_viewer/detail_panel/exif_map.dart';
+import 'package:immich_ui/immich_ui.dart' show GlassLift;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 class LocationDetails extends ConsumerStatefulWidget {
@@ -93,14 +94,22 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
                     onMapCreated: _onMapCreated,
                   ),
                   const SizedBox(height: 16),
-                  if (locationName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4.0),
-                      child: Text(locationName, style: context.textTheme.labelLarge),
+                  // fork: keeps the text after the map above the Liquid Glass sheet
+                  GlassLift(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (locationName != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4.0),
+                            child: Text(locationName, style: context.textTheme.labelLarge),
+                          ),
+                        Text(
+                          coordinates,
+                          style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceSecondary),
+                        ),
+                      ],
                     ),
-                  Text(
-                    coordinates,
-                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceSecondary),
                   ),
                 ],
               ),

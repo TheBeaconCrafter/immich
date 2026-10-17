@@ -13,7 +13,7 @@ import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details/ra
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details/tag_details.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details/technical_details.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/asset.provider.dart';
-import 'package:immich_ui/immich_ui.dart' show GlassSurface, useLiquidGlass;
+import 'package:immich_ui/immich_ui.dart' show GlassLift, GlassSurface, useLiquidGlass;
 
 class AssetDetails extends ConsumerWidget {
   final BaseAsset asset;
@@ -56,11 +56,19 @@ class AssetDetails extends ConsumerWidget {
               SheetAssetDescription(asset: asset, exifInfo: exifInfo),
               PeopleDetails(asset: asset),
               LocationDetails(asset: asset, exifInfo: exifInfo),
-              TechnicalDetails(asset: asset, exifInfo: exifInfo),
-              RatingDetails(exifInfo: exifInfo),
-              AppearsInDetails(asset: asset),
-              TagDetails(asset: asset),
-              SizedBox(height: context.padding.bottom + 48),
+              // fork: keeps the details after the map above the glass
+              GlassLift(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TechnicalDetails(asset: asset, exifInfo: exifInfo),
+                    RatingDetails(exifInfo: exifInfo),
+                    AppearsInDetails(asset: asset),
+                    TagDetails(asset: asset),
+                    SizedBox(height: context.padding.bottom + 48),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

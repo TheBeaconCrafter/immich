@@ -5,6 +5,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/actions/action.dart';
 import 'package:immich_mobile/presentation/actions/delete.action.dart';
 import 'package:immich_mobile/presentation/actions/edit_asset.action.dart';
+import 'package:immich_mobile/presentation/actions/favorite.action.dart';
 import 'package:immich_mobile/presentation/actions/restore.action.dart';
 import 'package:immich_mobile/presentation/actions/share.action.dart';
 import 'package:immich_mobile/presentation/actions/upload.action.dart';
@@ -49,6 +50,8 @@ class ViewerBottomBar extends ConsumerWidget {
 
       if (!isInLockedView) ...[
         if (!isInTrash) ...[
+          // fork: the favorite button moves here from the top bar with Liquid Glass
+          if (useLiquidGlass) ..._actionColumnButtons(context, ref, const [FavoriteAction(source: .viewer)]),
           ..._actionColumnButtons(context, ref, const [
             UploadAction(source: .viewer, showProgress: true),
             EditAssetAction(source: .viewer),

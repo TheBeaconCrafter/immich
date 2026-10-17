@@ -61,7 +61,8 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
           },
         ),
 
-      const ActionIconButton(action: FavoriteAction(source: .viewer)),
+      // fork: the Liquid Glass toolbar at the bottom holds the favorite button
+      if (!useLiquidGlass) const ActionIconButton(action: FavoriteAction(source: .viewer)),
 
       ImmichColorOverride(color: null, child: ViewerKebabMenu(originalTheme: originalTheme)),
     ];

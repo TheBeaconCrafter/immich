@@ -54,6 +54,37 @@ class GlassSurface extends StatelessWidget {
   }
 }
 
+/// Keeps [child] visible above an enclosing glass surface when it follows another platform view (such as a map)
+/// inside it. Flutter draws content after a platform view that doesn't overlap it below all earlier platform views,
+/// which would hide it under the glass; an empty native view behind [child] makes Flutter layer it on top.
+class GlassLift extends StatelessWidget {
+  final Widget child;
+
+  const GlassLift({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!useLiquidGlass) {
+      return child;
+    }
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        const Positioned.fill(
+          child: IgnorePointer(
+            child: UiKitView(
+              viewType: 'immich/glass_surface',
+              creationParams: {'clear': true},
+              creationParamsCodec: StandardMessageCodec(),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
 /// [Card] on other platforms, a native glass surface on iOS 26+. Takes the same parameters as the [Card]s it
 /// replaces; only the top corner radius of [shape] is used for the glass.
 class GlassCard extends StatelessWidget {
@@ -165,7 +196,15 @@ class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
         Offstage(
           child: KeyedSubtree(
             key: _menuKey,
-            child: Column(mainAxisSize: MainAxisSize.min, children: widget.menuChildren),
+            // Menu entries keep their menu form inside icon-only toolbars.
+            child: GlassIconOnly(
+              enabled: false,
+              // A bounded width, as triggers can sit in rows that leave it unbounded.
+              child: SizedBox(
+                width: 320,
+                child: Column(mainAxisSize: MainAxisSize.min, children: widget.menuChildren),
+              ),
+            ),
           ),
         ),
       ],
@@ -209,8 +248,16 @@ class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
 
   Future<List<Map<String, Object?>>> _items() async {
     final entries = <(String, IconData?, VoidCallback?)?>[];
+    final headers = <int, String>{};
     void visit(Element element) {
       final widget = element.widget;
+      if (widget is Text) {
+        final title = widget.data ?? widget.textSpan?.toPlainText() ?? '';
+        if (title.trim().isNotEmpty) {
+          headers[entries.length] = title;
+        }
+        return;
+      }
       if (widget is MenuItemButton) {
         final icon = widget.leadingIcon;
         entries.add((_text(element), icon is Icon ? icon.icon : null, widget.onPressed));
@@ -226,7 +273,8 @@ class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
     (_menuKey.currentContext as Element?)?.visitChildren(visit);
     _actions = [for (final entry in entries) entry?.$3];
     return [
-      for (final (index, entry) in entries.indexed)
+      for (final (index, entry) in entries.indexed) ...[
+        if (headers[index] != null) {'header': headers[index]},
         if (entry == null)
           {'divider': true}
         else
@@ -236,6 +284,7 @@ class _NativeMenuAnchorState extends State<NativeMenuAnchor> {
             'image': entry.$2 == null ? null : await _iconPng(entry.$2!),
             'disabled': entry.$3 == null,
           },
+      ],
     ];
   }
 
@@ -297,6 +346,12 @@ class GlassGroup extends StatelessWidget {
     if (!useLiquidGlass || children.isEmpty) {
       return row;
     }
+    if (children.length == 1) {
+      return Padding(
+        padding: margin,
+        child: GlassCircle(diameter: 48, child: children.first),
+      );
+    }
     return Padding(
       padding: margin,
       child: GlassSurface(
@@ -343,12 +398,14 @@ List<Widget> glassActions(List<Widget> actions) {
 
 /// Tells buttons below it to draw only their icon, as in UIKit glass toolbars.
 class GlassIconOnly extends InheritedWidget {
-  const GlassIconOnly({super.key, required super.child});
+  final bool enabled;
 
-  static bool of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<GlassIconOnly>() != null;
+  const GlassIconOnly({super.key, this.enabled = true, required super.child});
+
+  static bool of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<GlassIconOnly>()?.enabled ?? false;
 
   @override
-  bool updateShouldNotify(GlassIconOnly oldWidget) => false;
+  bool updateShouldNotify(GlassIconOnly oldWidget) => enabled != oldWidget.enabled;
 }
 
 /// An iOS Photos style toolbar on iOS 26+: the first and last buttons on glass circles, the rest on a glass capsule

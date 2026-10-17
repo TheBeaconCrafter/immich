@@ -123,18 +123,20 @@ Experimental → Liquid Glass* (on by default) turns it off; the choice applies 
 | Tab bar | A real `UITabBar` in the window, synced with Flutter's tabs over a channel. Flutter reserves its space and hides it whenever another route (viewer, dialog, sheet, page) covers the tab shell. |
 | Context menus | Native `UIMenu`s, presented from a hidden UIKit button placed over each Flutter menu trigger. The entries (label, icon, enabled state, action) are read from the `MenuItemButton`s the existing menu builds, so menus are not duplicated. Material icons are rendered to template images. |
 | Sheets | `BaseBottomSheet`, the viewer's info sheet and modal bottom sheets (`showGlassModalBottomSheet`) draw on native glass. |
-| Viewer | An iOS Photos style toolbar: icon-only buttons, share and delete on glass circles, the rest on a glass capsule. A round glass back button and a glass capsule for the top actions. |
+| Viewer | An iOS Photos style toolbar: icon-only buttons, share and delete on glass circles, the favorite button and the other actions on a glass capsule. A round glass back button and glass for the top actions. |
 | Other controls | App bar actions, the search field and filter chips, album search and filters, and the library buttons and lists sit on glass. |
 
 Glass surfaces are platform views that never take part in hit testing, so they can sit next to other platform views
-such as the video player without stealing touches.
+such as the video player without stealing touches. Flutter draws content that follows another platform view inside a
+glass surface (the map in the info sheet) below the glass; `GlassLift` puts an empty native view behind such content
+so it is layered on top.
 
 Code:
 
 - `mobile/ios/Runner/Core/LiquidGlass/LiquidGlassPlugin.swift`: the glass surface platform view, the native menu
   presenter and the native tab bar.
 - `mobile/packages/ui/lib/src/fork/liquid_glass.dart`: `GlassSurface`, `GlassCard`, `GlassGroup`, `GlassCircle`,
-  `GlassToolbar`, `GlassIconOnly`, `glassActions`, `showGlassModalBottomSheet` and `NativeMenuAnchor` (a drop-in for
+  `GlassToolbar`, `GlassIconOnly`, `GlassLift`, `glassActions`, `showGlassModalBottomSheet` and `NativeMenuAnchor` (a drop-in for
   `MenuAnchor`).
 - `mobile/lib/presentation/widgets/liquid_glass/native_tab_bar.widget.dart`: the Flutter side of the tab bar.
 
@@ -144,7 +146,9 @@ Upstream touch points (each marked `fork:`):
 - `main.dart`: reads the setting at startup (one line); `settings_key.dart`, `theme_config.dart` and
   `app_config.dart`: the setting key.
 - `tab_shell.page.dart`: uses the native tab bar on iOS 26+.
-- `base_bottom_sheet.widget.dart`: `Card` → `GlassCard`; `asset_details.widget.dart`: glass info sheet.
+- `base_bottom_sheet.widget.dart`: `Card` → `GlassCard`; `asset_details.widget.dart` and
+  `location_details.widget.dart`: glass info sheet.
+- `viewer_top_app_bar.widget.dart`: the favorite button moves to the bottom toolbar.
 - `menu_item.dart` (`ImmichMenu`), `trash.page.dart`, `album_option.widget.dart`, `album_selector.widget.dart` and
   `search.page.dart`: `MenuAnchor` → `NativeMenuAnchor`.
 - `map.page.dart`, `person.page.dart`, `album_options.page.dart`, `pending_uploads_banner.widget.dart`,
