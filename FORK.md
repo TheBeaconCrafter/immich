@@ -76,6 +76,9 @@ The cost is that on HDR-capable Android devices (Android 14+, display reports HD
 renders into a transparent surface above the window. Other devices keep upstream's opaque surface. Toggling the
 setting takes effect on Android after an app restart.
 
+HDR videos (iPhone Dolby Vision/HLG, Pixel HDR) play from the original file on Android HDR displays when the HDR
+setting is on: the server's transcodes are tone-mapped to SDR. This uses more data than the transcode.
+
 While you drag a photo down to dismiss it, the normal Flutter image takes over, and the HDR one comes back if you
 let go.
 
@@ -87,6 +90,7 @@ These are the only edits to upstream files:
   `getRenderMode`, `onCreate`).
 - `AppDelegate.swift`: registers the plugin (one line).
 - `asset_page.widget.dart`: adds the overlay to the page's `Stack`.
+- `video_viewer.widget.dart`: plays the original video on Android HDR displays (one line).
 - `asset_preloader.dart`: preloads the HDR renditions of the neighbouring photos.
 - `settings_key.dart`, `image_config.dart` and `app_config.dart`: add the `imageHdr` setting.
 

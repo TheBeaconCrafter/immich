@@ -41,6 +41,16 @@ final hdrDisplaySupportedProvider = FutureProvider<bool>((ref) async {
   }
 });
 
+/// Whether videos should play from the original file: the server's transcodes are tone-mapped to SDR, so on
+/// Android's HDR viewer an iPhone Dolby Vision or HLG video would otherwise lose its highlights. (iOS plays HDR
+/// videos from the photo library or as streamed by AVPlayer already.)
+Future<bool> playOriginalHdrVideo(WidgetRef ref) async {
+  if (!Platform.isAndroid || !ref.read(appConfigProvider).image.hdr) {
+    return false;
+  }
+  return ref.read(hdrDisplaySupportedProvider.future);
+}
+
 /// Decodes the HDR rendition of [asset] in the background, so swiping to it shows HDR right away.
 void preloadHdrRendition(BaseAsset? asset) {
   if (asset == null || !_supported || !SettingsRepository.instance.appConfig.image.hdr) {
