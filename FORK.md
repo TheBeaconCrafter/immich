@@ -145,11 +145,21 @@ mise exec -- flutter run -d "iPhone 16 Pro"
 On an iPhone, you need a paid Apple developer team (`--team` above). Connect and unlock the phone, enable
 *Developer Mode* (Settings → Privacy & Security), then:
 
+Sign in to Xcode with the team's Apple ID (Xcode → Settings → Accounts). The first build for a new bundle ID has to
+let Xcode create the provisioning profiles, which `flutter build` doesn't, so build with `xcodebuild` and install
+with `devicectl`:
+
 ```bash
-open ios/Runner.xcworkspace                  # once: let Xcode set up signing for the Runner, Share and Widget targets
-mise exec -- flutter run -d <iphone-id> --release
-mise exec -- flutter build ipa --export-method development   # installable .ipa in build/ios/ipa/
+xcrun devicectl list devices                 # find the iPhone's id
+mise exec -- flutter build ios --release --config-only
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+  -destination 'id=<iphone-id>' -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+  -derivedDataPath build/ios_device build
+xcrun devicectl device install app --device <iphone-id> build/ios_device/Build/Products/Release-iphoneos/Immich.app
 ```
+
+Once the profiles exist, `mise exec -- flutter run -d <iphone-id> --release` works too, and
+`mise exec -- flutter build ipa --export-method development` builds an installable `.ipa` in `build/ios/ipa/`.
 
 The simulator runs the app, but HDR brightness needs a real iPhone on iOS 17+ (iOS 18+ for Android-made Ultra HDR).
 
