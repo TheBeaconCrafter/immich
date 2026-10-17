@@ -36,6 +36,7 @@ import 'package:immich_mobile/routing/app_navigation_observer.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/deep_link.service.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
+import 'package:immich_mobile/theme/material_you.dart';
 import 'package:immich_mobile/theme/theme_data.dart';
 import 'package:immich_mobile/utils/bootstrap.dart';
 import 'package:immich_mobile/utils/cache/widgets_binding.dart';
@@ -89,6 +90,7 @@ Future<void> initApp() async {
     }
   }
 
+  await fetchMaterialYouScheme(); // fork: Material You theming
   await DynamicTheme.fetchSystemPalette();
 
   final log = Logger("ImmichErrorLogger");

@@ -99,7 +99,7 @@ The setting's strings are hard-coded English, so there are no edits to `i18n/en.
 | Setting | Platforms | Default |
 | --- | --- | --- |
 | Display HDR photos | Android, iOS | on |
-| Material You theming: colors the app from the wallpaper, using Android's tonal spot palette | Android | on |
+| Material You theming: uses the device's own Material You colors, exactly as Android computes them (including styles such as monochrome), and replaces the primary color option | Android | on |
 | Floating tab bar: a Google Photos style pill with the tabs and a separate round search button | Android | off |
 
 Code: `mobile/lib/widgets/settings/experimental_settings.dart`, `mobile/lib/theme/material_you.dart` and
@@ -109,7 +109,10 @@ Upstream touch points (each marked `fork:`):
 
 - `settings.page.dart`: the Experimental section.
 - `settings_key.dart`, `theme_config.dart` and `app_config.dart`: the setting keys.
-- `theme.provider.dart`: Material You.
+- `theme.provider.dart`: Material You; `main.dart`: reads the device scheme at startup (one line);
+  `MainActivity.kt`: registers `theme/MaterialYouPlugin.kt` (one line); `primary_color_setting.dart`: grays out the
+  color option while Material You is on.
+- `library.page.dart`: keeps the last entries clear of the floating tab bar.
 - `tab_shell.page.dart`: the floating tab bar.
 
 ## Building and running
