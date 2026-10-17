@@ -25,6 +25,7 @@ import 'package:immich_mobile/utils/album_filter.utils.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
+import 'package:immich_ui/immich_ui.dart' show NativeMenuAnchor;
 import 'package:sliver_tools/sliver_tools.dart';
 
 typedef AlbumSelectorCallback = void Function(RemoteAlbum album);
@@ -282,7 +283,8 @@ class _SortButtonState extends ConsumerState<_SortButton> {
   @override
   Widget build(BuildContext context) {
     final effectiveOrder = albumSortOption.effectiveOrder(albumSortIsReverse);
-    return MenuAnchor(
+    return NativeMenuAnchor(
+      // fork: native Liquid Glass menu on iOS
       controller: widget.controller,
       style: MenuStyle(
         elevation: const WidgetStatePropertyAll(1),

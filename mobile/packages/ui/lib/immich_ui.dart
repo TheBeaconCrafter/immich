@@ -12,6 +12,7 @@ export 'src/components/text_button.dart';
 export 'src/components/text_input.dart';
 export 'src/components/url_input.dart';
 export 'src/constants.dart';
+export 'src/fork/liquid_glass.dart'; // fork: Liquid Glass components
 export 'src/snackbar.dart';
 export 'src/theme.dart';
 export 'src/translation.dart';

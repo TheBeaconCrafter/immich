@@ -98,7 +98,10 @@ class ViewerBottomBar extends ConsumerWidget {
                           if (!isReadonlyModeEnabled)
                             ImmichColorOverride(
                               color: Colors.white,
-                              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: actions),
+                              // fork: Liquid Glass on iOS
+                              child: GlassBar(
+                                child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: actions),
+                              ),
                             ),
                         ],
                       ),

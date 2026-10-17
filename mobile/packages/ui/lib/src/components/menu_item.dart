@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:immich_ui/src/constants.dart';
+import 'package:immich_ui/src/fork/liquid_glass.dart';
 import 'package:immich_ui/src/internal.dart';
 
 class ImmichMenu extends StatefulWidget {
@@ -31,7 +32,8 @@ class _ImmichMenuState extends State<ImmichMenu> {
   Widget build(BuildContext context) {
     return _ImmichMenuScope(
       controller: _controller,
-      child: MenuAnchor(
+      child: NativeMenuAnchor(
+        // fork: native Liquid Glass menu on iOS
         controller: _controller,
         style: widget.style,
         consumeOutsideTap: widget.consumeOutsideTap,

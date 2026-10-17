@@ -93,6 +93,37 @@ These are the only edits to upstream files:
 
 The setting's strings are hard-coded English, so there are no edits to `i18n/en.json`.
 
+## Liquid Glass on iOS (branch `feat/ios-liquid-glass`)
+
+On iOS 26 and later, the main navigation and controls use Apple's native Liquid Glass components. Older iOS
+versions and Android are unchanged: every component falls back to the regular Flutter widget.
+
+| What | How |
+| --- | --- |
+| Tab bar | A real `UITabBar`, laid over the Flutter view and synced with Flutter's tabs over a channel. Flutter reserves its space and hides it whenever another route (viewer, dialog, sheet, page) covers the tab shell. |
+| Context menus | Native `UIMenu`s, opened from a transparent native button over each Flutter menu trigger. The entries (label, icon, enabled state, action) are read from the `MenuItemButton`s the existing menu builds, so menus are not duplicated. Material icons are rendered to template images. |
+| Sheets | `BaseBottomSheet` draws on native glass (`GlassCard`). |
+| Buttons | Viewer and timeline actions sit on native glass: a round glass back button, glass capsules for icon groups, and a glass toolbar for the viewer's bottom actions. |
+
+Code:
+
+- `mobile/ios/Runner/Core/LiquidGlass/LiquidGlassPlugin.swift`: glass surface and menu platform views, and the
+  native tab bar.
+- `mobile/packages/ui/lib/src/fork/liquid_glass.dart`: `GlassSurface`, `GlassCard`, `GlassGroup`, `GlassCircle`,
+  `GlassBar`, `glassActions` and `NativeMenuAnchor` (a drop-in for `MenuAnchor`).
+- `mobile/lib/presentation/widgets/liquid_glass/native_tab_bar.widget.dart`: the Flutter side of the tab bar.
+
+Upstream touch points (each marked `fork:`):
+
+- `AppDelegate.swift`: registers the plugin (one line).
+- `tab_shell.page.dart`: uses the native tab bar on iOS 26+.
+- `base_bottom_sheet.widget.dart`: `Card` → `GlassCard`.
+- `menu_item.dart` (`ImmichMenu`), `trash.page.dart`, `album_option.widget.dart`, `album_selector.widget.dart` and
+  `search.page.dart`: `MenuAnchor` → `NativeMenuAnchor`.
+- `viewer_top_app_bar.widget.dart`, `bottom_bar.widget.dart` and `immich_sliver_app_bar.dart`: glass behind the
+  action buttons.
+- `immich_ui.dart`: exports the glass widgets.
+
 ## Building and running
 
 All commands run from the `mobile/` folder. The toolchain (Flutter, Java, Rust) is pinned by mise.

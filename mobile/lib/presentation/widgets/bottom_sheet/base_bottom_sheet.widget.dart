@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.state.dart';
+import 'package:immich_ui/immich_ui.dart' show GlassCard;
 
 class BaseBottomSheet extends ConsumerStatefulWidget {
   final List<Widget> actions;
@@ -74,7 +75,8 @@ class _BaseDraggableScrollableSheetState extends ConsumerState<BaseBottomSheet> 
       expand: widget.expand,
       shouldCloseOnMinExtent: widget.shouldCloseOnMinExtent,
       builder: (BuildContext context, ScrollController scrollController) {
-        return Card(
+        return GlassCard(
+          // fork: native Liquid Glass sheet on iOS
           color: widget.backgroundColor ?? context.colorScheme.surfaceContainer,
           elevation: 3.0,
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),

@@ -34,6 +34,7 @@ import 'package:immich_mobile/widgets/search/search_filter/people_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_chip.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_utils.dart';
 import 'package:immich_mobile/widgets/search/search_filter/star_rating_picker.dart';
+import 'package:immich_ui/immich_ui.dart' show NativeMenuAnchor;
 
 @RoutePage()
 class SearchPage extends HookConsumerWidget {
@@ -512,7 +513,8 @@ class SearchPage extends HookConsumerWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: MenuAnchor(
+            child: NativeMenuAnchor(
+              // fork: native Liquid Glass menu on iOS
               style: MenuStyle(
                 elevation: const WidgetStatePropertyAll(1),
                 shape: WidgetStateProperty.all(

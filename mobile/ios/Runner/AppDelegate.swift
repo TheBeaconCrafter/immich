@@ -34,6 +34,8 @@ import native_video_player
     NetworkApiSetup.setUp(binaryMessenger: messenger, api: NetworkApiImpl())
     // fork: Ultra HDR viewer
     if let registrar = registry.registrar(forPlugin: "HdrImagePlugin") { HdrImagePlugin.register(with: registrar) }
+    // fork: Liquid Glass components
+    if let registrar = registry.registrar(forPlugin: "LiquidGlassPlugin") { LiquidGlassPlugin.register(with: registrar) }
   }
 
   public static func cancelPlugins(with engine: FlutterEngine) {

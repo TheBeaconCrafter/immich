@@ -9,6 +9,7 @@ import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
+import 'package:immich_mobile/presentation/widgets/liquid_glass/native_tab_bar.widget.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
@@ -16,6 +17,7 @@ import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.da
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_ui/immich_ui.dart' show useLiquidGlass;
 
 @RoutePage()
 class TabShellPage extends ConsumerStatefulWidget {
@@ -87,6 +89,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
           onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
           child: Scaffold(
             resizeToAvoidBottomInset: false,
+            extendBody: useLiquidGlass, // fork: native Liquid Glass tab bar
             body: isScreenLandscape
                 ? Row(
                     children: [
@@ -171,6 +174,15 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
 
     if (isScreenLandscape || hideNavigationBar) {
       return const SizedBox.shrink();
+    }
+
+    // fork: native Liquid Glass tab bar
+    if (useLiquidGlass) {
+      return NativeTabBar(
+        destinations: widget.destinations.cast<NavigationDestination>(),
+        selectedIndex: widget.tabsRouter.activeIndex,
+        onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
+      );
     }
 
     return NavigationBar(

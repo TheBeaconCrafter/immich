@@ -21,6 +21,7 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/asset_viewer/cast_dialog.dart';
 import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_dialog.dart';
 import 'package:immich_mobile/widgets/common/user_circle_avatar.dart';
+import 'package:immich_ui/immich_ui.dart' show glassActions;
 
 class ImmichSliverAppBar extends ConsumerWidget {
   final List<Widget>? actions;
@@ -66,7 +67,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
           automaticallyImplyLeading: false,
           centerTitle: false,
           title: title ?? const _ImmichLogoWithText(),
-          actions: [
+          // fork: Liquid Glass on iOS
+          actions: glassActions([
             const _SyncStatusIndicator(),
             if (isCasting && !isReadonlyModeEnabled)
               IconButton(
@@ -77,7 +79,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
             if (showUploadButton && !isReadonlyModeEnabled) const _BackupIndicator(),
             const _ProfileIndicator(),
             const SizedBox(width: 8),
-          ],
+          ]),
         ),
       ),
     );

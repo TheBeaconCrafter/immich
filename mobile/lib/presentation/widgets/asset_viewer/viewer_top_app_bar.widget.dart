@@ -99,13 +99,14 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   data: context.themeData.copyWith(iconTheme: const IconThemeData(size: 22, color: Colors.white)),
                   child: NavigationToolbar(
                     centerMiddle: true,
-                    leading: const _AppBarBackButton(),
+                    leading: const GlassCircle(child: _AppBarBackButton()), // fork: Liquid Glass on iOS
                     middle: showingDetails ? null : _AssetInfoTitle(asset: asset),
                     trailing: !showingDetails && !isReadonlyModeEnabled
                         ? ImmichColorOverride(
                             color: Colors.white,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            // fork: Liquid Glass on iOS
+                            child: GlassGroup(
+                              margin: const EdgeInsets.only(right: 12),
                               children: isInLockedView ? lockedViewActions : actions,
                             ),
                           )

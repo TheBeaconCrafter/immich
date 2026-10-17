@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/base_action_button.widget.dart';
+import 'package:immich_ui/immich_ui.dart' show NativeMenuAnchor;
 
 class RemoteAlbumOption extends StatelessWidget {
   const RemoteAlbumOption({
@@ -114,7 +115,8 @@ class RemoteAlbumOption extends StatelessWidget {
       );
     }
 
-    return MenuAnchor(
+    return NativeMenuAnchor(
+      // fork: native Liquid Glass menu on iOS
       consumeOutsideTap: true,
       style: MenuStyle(
         backgroundColor: WidgetStatePropertyAll(theme.scaffoldBackgroundColor),

@@ -12,6 +12,7 @@ import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
+import 'package:immich_ui/immich_ui.dart' show NativeMenuAnchor;
 
 @RoutePage()
 class TrashPage extends StatelessWidget {
@@ -96,7 +97,8 @@ class _TrashKebabMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MenuAnchor(
+    return NativeMenuAnchor(
+      // fork: native Liquid Glass menu on iOS
       consumeOutsideTap: true,
       style: MenuStyle(
         backgroundColor: WidgetStatePropertyAll(context.themeData.scaffoldBackgroundColor),
