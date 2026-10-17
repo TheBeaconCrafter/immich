@@ -19,6 +19,7 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
+import 'package:immich_ui/immich_ui.dart' show GlassSurface, useLiquidGlass;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 @RoutePage()
@@ -102,23 +103,26 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: FilledButton.icon(
-        onPressed: onTap,
-        label: Padding(
-          padding: const EdgeInsets.only(left: 4.0),
-          child: Text(label, style: TextStyle(color: context.colorScheme.onSurface, fontSize: 15)),
-        ),
-        style: FilledButton.styleFrom(
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          backgroundColor: context.colorScheme.surfaceContainerLow,
-          alignment: Alignment.centerLeft,
-          shape: RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(25)),
-            side: BorderSide(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
+      child: GlassSurface(
+        // fork: Liquid Glass on iOS
+        child: FilledButton.icon(
+          onPressed: onTap,
+          label: Padding(
+            padding: const EdgeInsets.only(left: 4.0),
+            child: Text(label, style: TextStyle(color: context.colorScheme.onSurface, fontSize: 15)),
           ),
+          style: FilledButton.styleFrom(
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            backgroundColor: useLiquidGlass ? Colors.transparent : context.colorScheme.surfaceContainerLow,
+            alignment: Alignment.centerLeft,
+            shape: RoundedRectangleBorder(
+              borderRadius: const BorderRadius.all(Radius.circular(25)),
+              side: BorderSide(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
+            ),
+          ),
+          icon: Icon(icon, color: context.primaryColor),
         ),
-        icon: Icon(icon, color: context.primaryColor),
       ),
     );
   }
@@ -428,59 +432,63 @@ class _QuickAccessButtonList extends ConsumerWidget {
     return SliverPadding(
       padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 32),
       sliver: SliverToBoxAdapter(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withAlpha(10),
-                context.colorScheme.primary.withAlpha(15),
-                context.colorScheme.primary.withAlpha(20),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        child: GlassSurface(
+          // fork: Liquid Glass on iOS
+          radius: 20,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
+              borderRadius: const BorderRadius.all(Radius.circular(20)),
+              gradient: LinearGradient(
+                colors: [
+                  context.colorScheme.primary.withAlpha(10),
+                  context.colorScheme.primary.withAlpha(15),
+                  context.colorScheme.primary.withAlpha(20),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
-          ),
-          child: ListView(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(20),
-                    topRight: const Radius.circular(20),
-                    bottomLeft: Radius.circular(partners.isEmpty ? 20 : 0),
-                    bottomRight: Radius.circular(partners.isEmpty ? 20 : 0),
+            child: ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(20),
+                      topRight: const Radius.circular(20),
+                      bottomLeft: Radius.circular(partners.isEmpty ? 20 : 0),
+                      bottomRight: Radius.circular(partners.isEmpty ? 20 : 0),
+                    ),
                   ),
+                  leading: const Icon(Icons.folder_outlined, size: 26),
+                  title: Text(
+                    context.t.folders,
+                    style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () => context.pushRoute(FolderRoute()),
                 ),
-                leading: const Icon(Icons.folder_outlined, size: 26),
-                title: Text(
-                  context.t.folders,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline_rounded, size: 26),
+                  title: Text(
+                    context.t.locked_folder,
+                    style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () => context.pushRoute(const LockedFolderRoute()),
                 ),
-                onTap: () => context.pushRoute(FolderRoute()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline_rounded, size: 26),
-                title: Text(
-                  context.t.locked_folder,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
+                ListTile(
+                  leading: const Icon(Icons.group_outlined, size: 26),
+                  title: Text(
+                    context.t.partners,
+                    style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () => context.pushRoute(const PartnerRoute()),
                 ),
-                onTap: () => context.pushRoute(const LockedFolderRoute()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.group_outlined, size: 26),
-                title: Text(
-                  context.t.partners,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                onTap: () => context.pushRoute(const PartnerRoute()),
-              ),
-              _PartnerList(partners: partners.toList()),
-            ],
+                _PartnerList(partners: partners.toList()),
+              ],
+            ),
           ),
         ),
       ),

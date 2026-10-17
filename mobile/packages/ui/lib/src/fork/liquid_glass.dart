@@ -35,7 +35,9 @@ class GlassSurface extends StatelessWidget {
     if (!useLiquidGlass) {
       return child;
     }
+    // Passes the constraints through like a DecoratedBox, so the glass is exactly as large as the child.
     return Stack(
+      fit: StackFit.passthrough,
       children: [
         Positioned.fill(
           child: IgnorePointer(
@@ -339,22 +341,105 @@ List<Widget> glassActions(List<Widget> actions) {
   return [Center(child: GlassGroup(children: buttons)), ?spacer];
 }
 
-/// A full-width toolbar on a glass capsule inset from the screen edges on iOS 26+; just [child] elsewhere.
-class GlassBar extends StatelessWidget {
-  final Widget child;
+/// Tells buttons below it to draw only their icon, as in UIKit glass toolbars.
+class GlassIconOnly extends InheritedWidget {
+  const GlassIconOnly({super.key, required super.child});
 
-  const GlassBar({super.key, required this.child});
+  static bool of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<GlassIconOnly>() != null;
+
+  @override
+  bool updateShouldNotify(GlassIconOnly oldWidget) => false;
+}
+
+/// An iOS Photos style toolbar on iOS 26+: the first and last buttons on glass circles, the rest on a glass capsule
+/// between them, all icon only. [fallback] is used elsewhere.
+class GlassToolbar extends StatelessWidget {
+  final List<Widget> children;
+  final Widget fallback;
+
+  const GlassToolbar({super.key, required this.children, required this.fallback});
 
   @override
   Widget build(BuildContext context) {
-    if (!useLiquidGlass) {
-      return child;
+    if (!useLiquidGlass || children.isEmpty) {
+      return fallback;
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      child: GlassSurface(
-        child: Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: child),
+    final ends = children.length > 1;
+    final middle = ends ? children.sublist(1, children.length - 1) : children;
+    return GlassIconOnly(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+        child: Row(
+          mainAxisAlignment: ends ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+          children: [
+            if (ends) GlassCircle(diameter: 48, child: children.first),
+            if (middle.isNotEmpty) GlassGroup(children: middle),
+            if (ends) GlassCircle(diameter: 48, child: children.last),
+          ],
+        ),
       ),
     );
   }
+}
+
+/// Drop-in for [showModalBottomSheet] that draws the sheet on native glass on iOS 26+.
+Future<T?> showGlassModalBottomSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  Color? backgroundColor,
+  double? elevation,
+  ShapeBorder? shape,
+  bool isScrollControlled = false,
+  bool useSafeArea = false,
+  bool isDismissible = true,
+  bool enableDrag = true,
+  bool? showDragHandle,
+}) {
+  if (!useLiquidGlass) {
+    return showModalBottomSheet<T>(
+      context: context,
+      builder: builder,
+      backgroundColor: backgroundColor,
+      elevation: elevation,
+      shape: shape,
+      isScrollControlled: isScrollControlled,
+      useSafeArea: useSafeArea,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
+      showDragHandle: showDragHandle,
+    );
+  }
+  return showModalBottomSheet<T>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
+    isScrollControlled: isScrollControlled,
+    useSafeArea: useSafeArea,
+    isDismissible: isDismissible,
+    enableDrag: enableDrag,
+    showDragHandle: false,
+    builder: (context) => GlassSurface(
+      radius: 28,
+      topOnly: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (showDragHandle ?? false)
+            Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 36,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          Flexible(child: builder(context)),
+        ],
+      ),
+    ),
+  );
 }

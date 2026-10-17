@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_ui/immich_ui.dart' show GlassSurface, useLiquidGlass;
 
 class SearchFilterChip extends StatelessWidget {
   final String label;
@@ -21,6 +22,31 @@ class SearchFilterChip extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 14.0),
             child: Row(children: [Icon(icon, size: 18), const SizedBox(width: 4.0), currentFilter!]),
+          ),
+        ),
+      );
+    }
+    // fork: Liquid Glass on iOS
+    if (useLiquidGlass) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: GlassSurface(
+            child: Center(
+              widthFactor: 1,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 14.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 18),
+                    const SizedBox(width: 4.0),
+                    Text(label, style: TextStyle(color: context.colorScheme.onSecondaryContainer)),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       );

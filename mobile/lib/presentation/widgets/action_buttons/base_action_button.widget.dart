@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_ui/immich_ui.dart' show GlassIconOnly;
 
 class BaseActionButton extends StatelessWidget {
   const BaseActionButton({
@@ -36,7 +37,8 @@ class BaseActionButton extends StatelessWidget {
     final iconSize = iconTheme.size ?? 24.0;
     final textColor = context.themeData.textTheme.labelLarge?.color;
 
-    if (iconOnly) {
+    if (iconOnly || GlassIconOnly.of(context)) {
+      // fork: icon only in Liquid Glass toolbars
       final iconColor = this.iconColor ?? iconTheme.color ?? context.themeData.iconTheme.color;
 
       return IconButton(

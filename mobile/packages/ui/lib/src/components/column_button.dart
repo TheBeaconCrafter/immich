@@ -3,6 +3,7 @@ import 'dart:core';
 
 import 'package:flutter/material.dart';
 import 'package:immich_ui/src/constants.dart';
+import 'package:immich_ui/src/fork/liquid_glass.dart';
 import 'package:immich_ui/src/internal.dart';
 
 class ImmichColumnButton extends StatefulWidget {
@@ -51,6 +52,22 @@ class _ImmichColumnButtonState extends State<ImmichColumnButton> {
   @override
   Widget build(BuildContext context) {
     final foreground = context.colorOverride ?? Theme.of(context).colorScheme.onSurface;
+
+    // fork: icon only in Liquid Glass toolbars
+    if (GlassIconOnly.of(context)) {
+      return IconButton(
+        onPressed: _onPressed,
+        onLongPress: _onLongPress,
+        tooltip: widget.label,
+        color: foreground,
+        icon: _isLoading
+            ? const SizedBox.square(
+                dimension: ImmichIconSize.md,
+                child: CircularProgressIndicator(strokeWidth: ImmichBorderWidth.lg),
+              )
+            : Icon(widget.icon, size: ImmichIconSize.md),
+      );
+    }
 
     return TextButton(
       onPressed: _onPressed,

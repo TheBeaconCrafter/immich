@@ -115,32 +115,44 @@ Upstream touch points (each marked `fork:`):
 ## Liquid Glass on iOS (branch `feat/ios-liquid-glass`)
 
 On iOS 26 and later, the main navigation and controls use Apple's native Liquid Glass components. Older iOS
-versions and Android are unchanged: every component falls back to the regular Flutter widget.
+versions and Android are unchanged: every component falls back to the regular Flutter widget. *Settings →
+Experimental → Liquid Glass* (on by default) turns it off; the choice applies after restarting the app.
 
 | What | How |
 | --- | --- |
-| Tab bar | A real `UITabBar`, laid over the Flutter view and synced with Flutter's tabs over a channel. Flutter reserves its space and hides it whenever another route (viewer, dialog, sheet, page) covers the tab shell. |
-| Context menus | Native `UIMenu`s, opened from a transparent native button over each Flutter menu trigger. The entries (label, icon, enabled state, action) are read from the `MenuItemButton`s the existing menu builds, so menus are not duplicated. Material icons are rendered to template images. |
-| Sheets | `BaseBottomSheet` draws on native glass (`GlassCard`). |
-| Buttons | Viewer and timeline actions sit on native glass: a round glass back button, glass capsules for icon groups, and a glass toolbar for the viewer's bottom actions. |
+| Tab bar | A real `UITabBar` in the window, synced with Flutter's tabs over a channel. Flutter reserves its space and hides it whenever another route (viewer, dialog, sheet, page) covers the tab shell. |
+| Context menus | Native `UIMenu`s, presented from a hidden UIKit button placed over each Flutter menu trigger. The entries (label, icon, enabled state, action) are read from the `MenuItemButton`s the existing menu builds, so menus are not duplicated. Material icons are rendered to template images. |
+| Sheets | `BaseBottomSheet`, the viewer's info sheet and modal bottom sheets (`showGlassModalBottomSheet`) draw on native glass. |
+| Viewer | An iOS Photos style toolbar: icon-only buttons, share and delete on glass circles, the rest on a glass capsule. A round glass back button and a glass capsule for the top actions. |
+| Other controls | App bar actions, the search field and filter chips, album search and filters, and the library buttons and lists sit on glass. |
+
+Glass surfaces are platform views that never take part in hit testing, so they can sit next to other platform views
+such as the video player without stealing touches.
 
 Code:
 
-- `mobile/ios/Runner/Core/LiquidGlass/LiquidGlassPlugin.swift`: glass surface and menu platform views, and the
-  native tab bar.
+- `mobile/ios/Runner/Core/LiquidGlass/LiquidGlassPlugin.swift`: the glass surface platform view, the native menu
+  presenter and the native tab bar.
 - `mobile/packages/ui/lib/src/fork/liquid_glass.dart`: `GlassSurface`, `GlassCard`, `GlassGroup`, `GlassCircle`,
-  `GlassBar`, `glassActions` and `NativeMenuAnchor` (a drop-in for `MenuAnchor`).
+  `GlassToolbar`, `GlassIconOnly`, `glassActions`, `showGlassModalBottomSheet` and `NativeMenuAnchor` (a drop-in for
+  `MenuAnchor`).
 - `mobile/lib/presentation/widgets/liquid_glass/native_tab_bar.widget.dart`: the Flutter side of the tab bar.
 
 Upstream touch points (each marked `fork:`):
 
 - `AppDelegate.swift`: registers the plugin (one line).
+- `main.dart`: reads the setting at startup (one line); `settings_key.dart`, `theme_config.dart` and
+  `app_config.dart`: the setting key.
 - `tab_shell.page.dart`: uses the native tab bar on iOS 26+.
-- `base_bottom_sheet.widget.dart`: `Card` → `GlassCard`.
+- `base_bottom_sheet.widget.dart`: `Card` → `GlassCard`; `asset_details.widget.dart`: glass info sheet.
 - `menu_item.dart` (`ImmichMenu`), `trash.page.dart`, `album_option.widget.dart`, `album_selector.widget.dart` and
   `search.page.dart`: `MenuAnchor` → `NativeMenuAnchor`.
-- `viewer_top_app_bar.widget.dart`, `bottom_bar.widget.dart` and `immich_sliver_app_bar.dart`: glass behind the
-  action buttons.
+- `map.page.dart`, `person.page.dart`, `album_options.page.dart`, `pending_uploads_banner.widget.dart`,
+  `primary_color_setting.dart` and `search_filter_utils.dart`: `showModalBottomSheet` → `showGlassModalBottomSheet`.
+- `viewer_top_app_bar.widget.dart`, `bottom_bar.widget.dart`, `immich_sliver_app_bar.dart`, `search.page.dart`,
+  `search_filter_chip.dart`, `album_selector.widget.dart` and `library.page.dart`: glass behind controls.
+- `base_action_button.widget.dart` and `column_button.dart`: icon only inside a `GlassIconOnly` toolbar.
+- `immich_sliver_app_bar.dart`: the sync indicator no longer leaves an empty slot once it has faded out.
 - `immich_ui.dart`: exports the glass widgets.
 
 ## Building and running

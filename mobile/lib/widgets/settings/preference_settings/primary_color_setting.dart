@@ -10,6 +10,7 @@ import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/theme.provider.dart';
 import 'package:immich_mobile/theme/color_scheme.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
+import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 
 class PrimaryColorSetting extends HookConsumerWidget {
   const PrimaryColorSetting({super.key});
@@ -142,7 +143,8 @@ class PrimaryColorSetting extends HookConsumerWidget {
     }
 
     return ListTile(
-      onTap: () => showModalBottomSheet(
+      onTap: () => showGlassModalBottomSheet(
+        // fork: Liquid Glass on iOS
         context: context,
         isScrollControlled: true,
         builder: (BuildContext ctx) {

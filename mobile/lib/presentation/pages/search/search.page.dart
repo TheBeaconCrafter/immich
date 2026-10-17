@@ -34,7 +34,7 @@ import 'package:immich_mobile/widgets/search/search_filter/people_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_chip.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_utils.dart';
 import 'package:immich_mobile/widgets/search/search_filter/star_rating_picker.dart';
-import 'package:immich_ui/immich_ui.dart' show NativeMenuAnchor;
+import 'package:immich_ui/immich_ui.dart' show GlassSurface, NativeMenuAnchor;
 
 @RoutePage()
 class SearchPage extends HookConsumerWidget {
@@ -618,30 +618,33 @@ class SearchPage extends HookConsumerWidget {
             ),
           ),
         ],
-        title: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(0), width: 0),
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withValues(alpha: 0.075),
-                context.colorScheme.primary.withValues(alpha: 0.09),
-                context.colorScheme.primary.withValues(alpha: 0.075),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        // fork: Liquid Glass on iOS
+        title: GlassSurface(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: context.colorScheme.onSurface.withAlpha(0), width: 0),
+              borderRadius: const BorderRadius.all(Radius.circular(24)),
+              gradient: LinearGradient(
+                colors: [
+                  context.colorScheme.primary.withValues(alpha: 0.075),
+                  context.colorScheme.primary.withValues(alpha: 0.09),
+                  context.colorScheme.primary.withValues(alpha: 0.075),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-          ),
-          child: SearchField(
-            hintText: searchHintText.value,
-            key: const Key('search_text_field'),
-            controller: textSearchController,
-            contentPadding: filter.value.assetId != null ? const EdgeInsets.only(left: 24) : const EdgeInsets.all(8),
-            prefixIcon: filter.value.assetId != null
-                ? null
-                : Icon(getSearchPrefixIcon(), color: context.colorScheme.primary),
-            onSubmitted: handleTextSubmitted,
-            focusNode: ref.watch(searchInputFocusProvider),
+            child: SearchField(
+              hintText: searchHintText.value,
+              key: const Key('search_text_field'),
+              controller: textSearchController,
+              contentPadding: filter.value.assetId != null ? const EdgeInsets.only(left: 24) : const EdgeInsets.all(8),
+              prefixIcon: filter.value.assetId != null
+                  ? null
+                  : Icon(getSearchPrefixIcon(), color: context.colorScheme.primary),
+              onSubmitted: handleTextSubmitted,
+              focusNode: ref.watch(searchInputFocusProvider),
+            ),
           ),
         ),
       ),
@@ -874,47 +877,51 @@ class _QuickLinkList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-        border: Border.all(color: context.colorScheme.outline.withAlpha(10), width: 1),
-        gradient: LinearGradient(
-          colors: [
-            context.colorScheme.primary.withAlpha(10),
-            context.colorScheme.primary.withAlpha(15),
-            context.colorScheme.primary.withAlpha(20),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+    // fork: Liquid Glass on iOS
+    return GlassSurface(
+      radius: 20,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          border: Border.all(color: context.colorScheme.outline.withAlpha(10), width: 1),
+          gradient: LinearGradient(
+            colors: [
+              context.colorScheme.primary.withAlpha(10),
+              context.colorScheme.primary.withAlpha(15),
+              context.colorScheme.primary.withAlpha(20),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-      ),
-      child: ListView(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _QuickLink(
-            title: context.t.recently_taken,
-            icon: Icons.schedule_outlined,
-            isTop: true,
-            onTap: () => context.pushRoute(const RecentlyTakenRoute()),
-          ),
-          _QuickLink(
-            title: context.t.recently_added,
-            icon: Icons.upload_outlined,
-            onTap: () => context.pushRoute(const RecentlyAddedRoute()),
-          ),
-          _QuickLink(
-            title: context.t.videos,
-            icon: Icons.play_circle_outline_rounded,
-            onTap: () => context.pushRoute(const VideoRoute()),
-          ),
-          _QuickLink(
-            title: context.t.favorites,
-            icon: Icons.favorite_border_rounded,
-            isBottom: true,
-            onTap: () => context.pushRoute(const FavoriteRoute()),
-          ),
-        ],
+        child: ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _QuickLink(
+              title: context.t.recently_taken,
+              icon: Icons.schedule_outlined,
+              isTop: true,
+              onTap: () => context.pushRoute(const RecentlyTakenRoute()),
+            ),
+            _QuickLink(
+              title: context.t.recently_added,
+              icon: Icons.upload_outlined,
+              onTap: () => context.pushRoute(const RecentlyAddedRoute()),
+            ),
+            _QuickLink(
+              title: context.t.videos,
+              icon: Icons.play_circle_outline_rounded,
+              onTap: () => context.pushRoute(const VideoRoute()),
+            ),
+            _QuickLink(
+              title: context.t.favorites,
+              icon: Icons.favorite_border_rounded,
+              isBottom: true,
+              onTap: () => context.pushRoute(const FavoriteRoute()),
+            ),
+          ],
+        ),
       ),
     );
   }

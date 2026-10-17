@@ -8,6 +8,7 @@ import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/providers/album/pending_album_uploads.provider.dart';
 import 'package:immich_mobile/providers/backup/asset_upload_progress.provider.dart';
+import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 
 /// Pinned banner sliver that surfaces in-flight album uploads directly under
 /// the album app bar. Renders nothing while the queue is empty. Tapping the
@@ -48,7 +49,8 @@ class PendingUploadsBanner extends ConsumerWidget {
   }
 
   static Future<void> _openSheet(BuildContext context, String albumId) {
-    return showModalBottomSheet(
+    return showGlassModalBottomSheet(
+      // fork: Liquid Glass on iOS
       context: context,
       showDragHandle: true,
       builder: (_) => _PendingUploadsSheet(albumId: albumId),

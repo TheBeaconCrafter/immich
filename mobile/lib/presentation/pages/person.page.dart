@@ -11,6 +11,7 @@ import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/utils/people.utils.dart';
 import 'package:immich_mobile/widgets/common/person_sliver_app_bar.dart';
+import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 
 @RoutePage()
 class PersonPage extends ConsumerStatefulWidget {
@@ -52,7 +53,8 @@ class _PersonPageState extends ConsumerState<PersonPage> {
   }
 
   Future<void> showOptionSheet(BuildContext context) {
-    return showModalBottomSheet(
+    return showGlassModalBottomSheet(
+      // fork: Liquid Glass on iOS
       context: context,
       backgroundColor: context.colorScheme.surface,
       isScrollControlled: false,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 
 Future<T> showFilterBottomSheet<T>({
   required BuildContext context,
@@ -6,7 +7,8 @@ Future<T> showFilterBottomSheet<T>({
   bool isScrollControlled = false,
   bool isDismissible = true,
 }) async {
-  return await showModalBottomSheet(
+  return await showGlassModalBottomSheet(
+    // fork: Liquid Glass on iOS
     context: context,
     isScrollControlled: isScrollControlled,
     useSafeArea: false,

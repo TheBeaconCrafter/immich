@@ -20,6 +20,7 @@ import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/widgets/common/user_circle_avatar.dart';
+import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 
 @RoutePage()
 class AlbumOptionsPage extends HookConsumerWidget {
@@ -125,7 +126,8 @@ class AlbumOptionsPage extends HookConsumerWidget {
       }
 
       unawaited(
-        showModalBottomSheet(
+        showGlassModalBottomSheet(
+          // fork: Liquid Glass on iOS
           backgroundColor: context.colorScheme.surfaceContainer,
           isScrollControlled: false,
           context: context,

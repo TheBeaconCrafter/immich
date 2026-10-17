@@ -81,13 +81,25 @@ private final class GlassSurfaceView: NSObject, FlutterPlatformView {
     super.init()
 
     let radius = (params["radius"] as? NSNumber)?.doubleValue ?? 0
-    if #available(iOS 26.0, *), radius < 0 {
-      effectView.cornerConfiguration = .capsule()
+    let topOnly = params["topOnly"] as? Bool == true
+    if #available(iOS 26.0, *) {
+      if radius < 0 {
+        effectView.cornerConfiguration = .capsule()
+      } else if topOnly {
+        effectView.cornerConfiguration = .corners(
+          topLeftRadius: .fixed(radius),
+          topRightRadius: .fixed(radius),
+          bottomLeftRadius: .fixed(0),
+          bottomRightRadius: .fixed(0)
+        )
+      } else {
+        effectView.cornerConfiguration = .uniformCorners(radius: .fixed(radius))
+      }
     } else {
       effectView.layer.cornerRadius = radius
       effectView.layer.cornerCurve = .continuous
       effectView.clipsToBounds = true
-      if params["topOnly"] as? Bool == true {
+      if topOnly {
         effectView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
       }
     }
@@ -256,7 +268,9 @@ private final class NativeTabBar: NSObject, UITabBarDelegate {
 
   private func ensureTabBar() -> UITabBar? {
     if let tabBar { return tabBar }
-    guard let host = rootViewController()?.view else { return nil }
+    // In the window rather than the Flutter view: Flutter adds platform views to its view as they are created, which
+    // would stack them above the bar.
+    guard let host = rootViewController()?.view?.window else { return nil }
     let tabBar = UITabBar()
     tabBar.delegate = self
     tabBar.alpha = 0

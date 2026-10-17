@@ -25,7 +25,7 @@ import 'package:immich_mobile/utils/album_filter.utils.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
-import 'package:immich_ui/immich_ui.dart' show NativeMenuAnchor;
+import 'package:immich_ui/immich_ui.dart' show GlassSurface, NativeMenuAnchor, useLiquidGlass;
 import 'package:sliver_tools/sliver_tools.dart';
 
 typedef AlbumSelectorCallback = void Function(RemoteAlbum album);
@@ -392,33 +392,36 @@ class _SearchBar extends StatelessWidget {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       sliver: SliverToBoxAdapter(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(0), width: 0),
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withValues(alpha: 0.075),
-                context.colorScheme.primary.withValues(alpha: 0.09),
-                context.colorScheme.primary.withValues(alpha: 0.075),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              transform: const GradientRotation(0.5 * pi),
+        // fork: Liquid Glass on iOS
+        child: GlassSurface(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: context.colorScheme.onSurface.withAlpha(0), width: 0),
+              borderRadius: const BorderRadius.all(Radius.circular(24)),
+              gradient: LinearGradient(
+                colors: [
+                  context.colorScheme.primary.withValues(alpha: 0.075),
+                  context.colorScheme.primary.withValues(alpha: 0.09),
+                  context.colorScheme.primary.withValues(alpha: 0.075),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                transform: const GradientRotation(0.5 * pi),
+              ),
             ),
-          ),
-          child: SearchField(
-            autofocus: false,
-            contentPadding: const EdgeInsets.all(16),
-            hintText: context.t.search_albums,
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: searchController.text.isNotEmpty
-                ? IconButton(icon: const Icon(Icons.clear_rounded), onPressed: onClearSearch)
-                : null,
-            controller: searchController,
-            onChanged: (_) => onSearch(searchController.text, filterMode),
-            focusNode: searchFocusNode,
-            onTapOutside: (_) => searchFocusNode.unfocus(),
+            child: SearchField(
+              autofocus: false,
+              contentPadding: const EdgeInsets.all(16),
+              hintText: context.t.search_albums,
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: searchController.text.isNotEmpty
+                  ? IconButton(icon: const Icon(Icons.clear_rounded), onPressed: onClearSearch)
+                  : null,
+              controller: searchController,
+              onChanged: (_) => onSearch(searchController.text, filterMode),
+              focusNode: searchFocusNode,
+              onTapOutside: (_) => searchFocusNode.unfocus(),
+            ),
           ),
         ),
       ),
@@ -488,7 +491,8 @@ class _QuickFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    // fork: Liquid Glass on iOS
+    final button = TextButton(
       onPressed: onTap,
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.all(isSelected ? context.colorScheme.primary : Colors.transparent),
@@ -504,6 +508,18 @@ class _QuickFilterButton extends StatelessWidget {
         style: TextStyle(
           color: isSelected ? context.colorScheme.onPrimary : context.colorScheme.onSurface,
           fontSize: 14,
+        ),
+      ),
+    );
+    if (!useLiquidGlass || isSelected) {
+      return button;
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: GlassSurface(
+        child: Theme(
+          data: context.themeData.copyWith(materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          child: button,
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/map/map.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_settings_sheet.dart';
+import 'package:immich_ui/immich_ui.dart' show showGlassModalBottomSheet;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 @RoutePage()
@@ -14,7 +15,8 @@ class MapPage extends StatelessWidget {
   const MapPage({super.key, this.initialLocation});
 
   Future<void> onSettingsPressed(BuildContext context) {
-    return showModalBottomSheet(
+    return showGlassModalBottomSheet(
+      // fork: Liquid Glass on iOS
       elevation: 0.0,
       showDragHandle: true,
       isScrollControlled: true,
