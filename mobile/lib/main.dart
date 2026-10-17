@@ -37,6 +37,7 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/deep_link.service.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
 import 'package:immich_mobile/theme/theme_data.dart';
+import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/utils/bootstrap.dart';
 import 'package:immich_mobile/utils/cache/widgets_binding.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
@@ -90,6 +91,7 @@ Future<void> initApp() async {
   }
 
   await DynamicTheme.fetchSystemPalette();
+  liquidGlassEnabled = SettingsRepository.instance.appConfig.theme.liquidGlass; // fork: Liquid Glass setting
 
   final log = Logger("ImmichErrorLogger");
 

@@ -7,14 +7,20 @@ import 'package:flutter/services.dart';
 // Fork feature: native Liquid Glass components on iOS 26+ (see FORK.md). Native side: ios/Runner/Core/LiquidGlass/.
 // Every widget here falls back to the regular Flutter widget elsewhere, so call sites stay platform independent.
 
-/// Whether native Liquid Glass components are used: iOS 26 or newer.
-final bool useLiquidGlass = () {
+/// Whether the platform has native Liquid Glass components: iOS 26 or newer.
+final bool liquidGlassSupported = () {
   if (!Platform.isIOS) {
     return false;
   }
   final major = int.tryParse(RegExp(r'(\d+)').firstMatch(Platform.operatingSystemVersion)?.group(1) ?? '');
   return major != null && major >= 26;
 }();
+
+/// The user's choice, set once at startup: switching mid-session would leave native views behind.
+bool liquidGlassEnabled = true;
+
+/// Whether native Liquid Glass components are used.
+bool get useLiquidGlass => liquidGlassSupported && liquidGlassEnabled;
 
 /// Native glass material behind [child]. [radius] < 0 makes a capsule; [topOnly] rounds only the top corners.
 class GlassSurface extends StatelessWidget {

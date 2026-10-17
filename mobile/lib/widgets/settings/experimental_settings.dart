@@ -39,6 +39,13 @@ class ExperimentalSettings extends StatelessWidget {
             subtitle: 'Use a floating navigation bar that photos scroll underneath, with a separate search button.',
           ),
         ],
+        if (liquidGlassSupported)
+          const _ToggleSetting(
+            setting: .themeLiquidGlass,
+            title: 'Liquid Glass',
+            subtitle:
+                "Use iOS's native Liquid Glass tab bar, menus, sheets and buttons. Changes apply after restarting the app.",
+          ),
       ],
       showDivider: true,
     );

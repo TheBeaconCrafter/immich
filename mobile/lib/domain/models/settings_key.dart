@@ -15,6 +15,7 @@ enum SettingsKey<T> {
   themeColorfulInterface<bool>(),
   themeMaterialYou<bool>(), // fork: experimental settings
   themeFloatingTabBar<bool>(), // fork: experimental settings
+  themeLiquidGlass<bool>(), // fork: experimental settings
 
   // Image
   imagePreferRemote<bool>(),
