@@ -35,6 +35,8 @@ internal object HdrImageLoader {
   private const val CACHE_SIZE_BYTES = 512L * 1024 * 1024
 
   private val executor = Executors.newFixedThreadPool(2)
+  // Preloads queue separately so they never delay the photo on screen.
+  private val backgroundExecutor = Executors.newSingleThreadExecutor { Thread(it).apply { priority = Thread.MIN_PRIORITY } }
   lateinit var context: Context
     private set
   private lateinit var resolver: ContentResolver
@@ -56,9 +58,10 @@ internal object HdrImageLoader {
     url: String?,
     maxSize: Int,
     signal: CancellationSignal,
+    background: Boolean,
     onResult: (Result<Bitmap>) -> Unit,
   ) {
-    executor.execute {
+    (if (background) backgroundExecutor else executor).execute {
       if (signal.isCanceled) return@execute onResult(Result.failure(OperationCanceledException()))
       onResult(runCatching {
         val (bytes, contentType) = when {

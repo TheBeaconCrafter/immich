@@ -20,24 +20,38 @@ const _channel = MethodChannel('immich/hdr_image');
 
 const _maxDecodeSize = 4096;
 
-// Lets hero and page transitions finish before the HDR rendition is loaded.
+// iOS: lets hero and page transitions finish before the native view is created.
 const _activationDelay = Duration(milliseconds: 400);
 
 const _candidateExtensions = {'jpg', 'jpeg', 'heic', 'heif', 'hif', 'avif'};
 
 final _log = Logger('HdrImageOverlay');
 
+bool _supported = false;
+
 final hdrDisplaySupportedProvider = FutureProvider<bool>((ref) async {
   if (!Platform.isAndroid && !Platform.isIOS) {
     return false;
   }
   try {
-    return await _channel.invokeMethod<bool>('isSupported') ?? false;
+    return _supported = await _channel.invokeMethod<bool>('isSupported') ?? false;
   } catch (e, stack) {
     _log.warning('Failed to query HDR support', e, stack);
     return false;
   }
 });
+
+/// Decodes the HDR rendition of [asset] in the background, so swiping to it shows HDR right away (Android).
+void preloadHdrRendition(BaseAsset? asset) {
+  if (asset == null || !Platform.isAndroid || !_supported || !SettingsRepository.instance.appConfig.image.hdr) {
+    return;
+  }
+  final source = _hdrSource(asset);
+  if (source == null || _knownSdr.contains(asset.heroTag)) {
+    return;
+  }
+  unawaited(_channel.invokeMethod<void>('preload', source).catchError((Object _) {}));
+}
 
 /// Android only applies this on the next app start, as it decides how Flutter's surface is composited.
 Future<void> setHdrEnabled(bool enabled) async {
@@ -96,6 +110,7 @@ class HdrImageOverlay extends ConsumerStatefulWidget {
   final BaseAsset asset;
   final PhotoViewControllerBase? controller;
 
+  /// iOS only embeds a native view for the page in view; Android shows every visible page in HDR.
   final bool isActive;
 
   const HdrImageOverlay({super.key, required this.asset, required this.controller, required this.isActive});
@@ -114,7 +129,9 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
   // iOS: per-view channel of the embedded platform view.
   MethodChannel? _viewChannel;
 
-  // Android: token of the native layer request, and whether the HDR rendition is drawn and can be revealed.
+  // Android: activation follows the route animation; the token identifies this page's native layer slot, and
+  // _ready says its HDR rendition is drawn and can be revealed.
+  Animation<double>? _routeAnimation;
   int? _token;
   bool _ready = false;
   double _devicePixelRatio = 1.0;
@@ -136,7 +153,9 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
     }
     if (oldWidget.asset.heroTag != widget.asset.heroTag) {
       _isSdr = false;
-      _activated = false;
+      if (!Platform.isAndroid) {
+        _activated = false;
+      }
       _release();
     }
     if (oldWidget.isActive != widget.isActive || oldWidget.asset.heroTag != widget.asset.heroTag) {
@@ -145,7 +164,34 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!Platform.isAndroid) {
+      return;
+    }
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation != _routeAnimation) {
+      _routeAnimation?.removeStatusListener(_onRouteStatus);
+      _routeAnimation = animation?..addStatusListener(_onRouteStatus);
+      _activated = (animation?.status ?? AnimationStatus.completed) == AnimationStatus.completed;
+    }
+  }
+
+  /// Android pages show HDR once the viewer finished opening (the hero flight) and until it starts closing.
+  void _onRouteStatus(AnimationStatus status) {
+    final active = status == AnimationStatus.completed;
+    if (active == _activated || !mounted) {
+      return;
+    }
+    setState(() => _activated = active);
+    if (!active) {
+      _release();
+    }
+  }
+
+  @override
   void dispose() {
+    _routeAnimation?.removeStatusListener(_onRouteStatus);
     _activationTimer?.cancel();
     unawaited(_controllerSub?.cancel());
     _release();
@@ -164,6 +210,9 @@ class _HdrImageOverlayState extends ConsumerState<HdrImageOverlay> {
   }
 
   void _scheduleActivation() {
+    if (Platform.isAndroid) {
+      return;
+    }
     _activationTimer?.cancel();
     if (!widget.isActive) {
       if (_activated) {
@@ -363,26 +412,23 @@ class _ClearPainter extends CustomPainter {
   bool shouldRepaint(_ClearPainter oldDelegate) => false;
 }
 
-/// Android's native HDR layer. One photo at a time, identified by a token; its on-screen rect is mirrored
-/// after every frame (without scheduling frames of its own).
+/// Android's native HDR layer. Each visible page owns a slot identified by a token; slot rects are mirrored
+/// after every frame (without scheduling frames of their own).
 class _HdrLayer {
   static final instance = _HdrLayer._();
 
   _HdrLayer._();
 
   int _nextToken = 0;
-  int? _token;
-  Rect? Function()? _rectSource;
-  Rect? _lastRect;
+  final _slots = <int, _Slot>{};
   bool _frameCallbackAdded = false;
 
   int show(Map<String, Object> source, Rect? Function() rectSource, void Function(bool isHdr) onResult) {
-    final token = _token = ++_nextToken;
-    _rectSource = rectSource;
-    _lastRect = null;
+    final token = ++_nextToken;
+    final slot = _slots[token] = _Slot(rectSource);
     if (!_frameCallbackAdded) {
       _frameCallbackAdded = true;
-      SchedulerBinding.instance.addPersistentFrameCallback((_) => _syncRect());
+      SchedulerBinding.instance.addPersistentFrameCallback((_) => _syncRects());
     }
 
     unawaited(
@@ -399,26 +445,29 @@ class _HdrLayer {
             onResult(false);
           }),
     );
-    _syncRect();
+    _syncRect(token, slot);
     return token;
   }
 
   void hide(int token) {
-    if (_token != token) {
+    if (_slots.remove(token) == null) {
       return;
     }
-    _token = null;
-    _rectSource = null;
     unawaited(_channel.invokeMethod<void>('hide', {'token': token}).catchError((Object _) {}));
   }
 
-  void _syncRect() {
-    final token = _token;
-    final rect = _rectSource?.call();
-    if (token == null || rect == null || rect == _lastRect) {
+  void _syncRects() {
+    for (final MapEntry(key: token, value: slot) in _slots.entries) {
+      _syncRect(token, slot);
+    }
+  }
+
+  void _syncRect(int token, _Slot slot) {
+    final rect = slot.rectSource();
+    if (rect == null || rect == slot.lastRect) {
       return;
     }
-    _lastRect = rect;
+    slot.lastRect = rect;
     unawaited(
       _channel
           .invokeMethod<void>('update', {
@@ -431,4 +480,11 @@ class _HdrLayer {
           .catchError((Object _) {}),
     );
   }
+}
+
+class _Slot {
+  final Rect? Function() rectSource;
+  Rect? lastRect;
+
+  _Slot(this.rectSource);
 }

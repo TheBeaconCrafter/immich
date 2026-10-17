@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
+import 'package:immich_mobile/presentation/widgets/asset_viewer/hdr_image_overlay.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 
 class AssetPreloader {
@@ -36,6 +37,9 @@ class AssetPreloader {
       _nextStream?.removeListener(_dummyListener);
       _prevStream = prev != null ? _resolveImage(prev, size, thumbnailSize) : null;
       _nextStream = next != null ? _resolveImage(next, size, thumbnailSize) : null;
+      // fork: Ultra HDR viewer
+      preloadHdrRendition(prev);
+      preloadHdrRendition(next);
     });
   }
 

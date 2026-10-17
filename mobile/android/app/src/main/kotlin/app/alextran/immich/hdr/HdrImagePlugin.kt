@@ -5,12 +5,8 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.ColorSpace
 import android.graphics.Matrix
 import android.os.Build
-import android.os.CancellationSignal
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -38,6 +34,7 @@ class HdrImagePlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
 
   override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     HdrImageLoader.initialize(binding.applicationContext)
+    HdrCache.initialize(binding.applicationContext)
     channel = MethodChannel(binding.binaryMessenger, CHANNEL).apply { setMethodCallHandler(this@HdrImagePlugin) }
   }
 
@@ -63,6 +60,12 @@ class HdrImagePlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
     host = null
   }
 
+  private fun source(call: MethodCall) = HdrCache.Source(
+    localId = call.argument<String>("localId"),
+    url = call.argument<String>("url"),
+    maxSize = call.argument<Number>("maxSize")?.toInt() ?: HdrImageLoader.DEFAULT_MAX_SIZE,
+  )
+
   override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
     when (call.method) {
       "isSupported" -> result.success(host != null)
@@ -72,13 +75,11 @@ class HdrImagePlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
       }
       "show" -> {
         val host = host ?: return result.success(mapOf("hdr" to false))
-        host.show(
-          token = call.argument<Number>("token")!!.toLong(),
-          localId = call.argument<String>("localId"),
-          url = call.argument<String>("url"),
-          maxSize = call.argument<Number>("maxSize")?.toInt() ?: HdrImageLoader.DEFAULT_MAX_SIZE,
-          onResult = result::success,
-        )
+        host.show(call.argument<Number>("token")!!.toLong(), source(call), result::success)
+      }
+      "preload" -> {
+        if (host != null) HdrCache.preload(source(call))
+        result.success(null)
       }
       "update" -> {
         host?.update(
@@ -137,96 +138,87 @@ object HdrMode {
   }
 }
 
-/** The native layer below Flutter. Only one photo is shown at a time, owned by the latest `show` token. */
+/**
+ * The native layer below Flutter: a black backdrop with one ImageView per page currently showing an HDR photo,
+ * so neighbouring photos stay HDR while swiping. Each page is identified by a `show` token.
+ */
 private class HdrHost(private val activity: Activity) {
-  private val mainHandler = Handler(Looper.getMainLooper())
-  private val imageView = ImageView(activity).apply {
-    scaleType = ImageView.ScaleType.MATRIX
-    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+  private class Slot(val view: ImageView) {
+    var bitmap: Bitmap? = null
+    var rect: FloatArray? = null
+    val matrix = Matrix()
   }
+
   private val container = FrameLayout(activity).apply {
     setBackgroundColor(Color.BLACK)
     visibility = View.GONE
     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-    addView(imageView, FrameLayout.LayoutParams(MATCH, MATCH))
   }
   private val content: ViewGroup? = activity.findViewById(android.R.id.content)
-  private val matrix = Matrix()
-
-  private var token = -1L
-  private var signal: CancellationSignal? = null
-  private var bitmap: Bitmap? = null
-  private var rect: FloatArray? = null
+  private val slots = HashMap<Long, Slot>()
 
   init {
     content?.addView(container, 0, ViewGroup.LayoutParams(MATCH, MATCH))
   }
 
-  fun show(token: Long, localId: String?, url: String?, maxSize: Int, onResult: (Map<String, Any?>) -> Unit) {
-    clear()
-    this.token = token
-    val signal = CancellationSignal().also { this.signal = it }
+  fun show(token: Long, source: HdrCache.Source, onResult: (Map<String, Any?>) -> Unit) {
+    hide(token)
+    val slot = Slot(ImageView(activity).apply {
+      scaleType = ImageView.ScaleType.MATRIX
+      importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    })
+    slots[token] = slot
 
-    HdrImageLoader.load(localId, url, maxSize, signal) { result ->
-      mainHandler.post {
-        if (this.token != token || signal.isCanceled) {
-          result.getOrNull()?.recycle()
-          return@post onResult(mapOf("hdr" to false))
-        }
-        val bitmap = result.getOrElse {
-          Log.w(TAG, "Failed to load HDR image", it)
-          return@post onResult(mapOf("hdr" to false, "error" to it.message))
-        }
-        Log.i(TAG, "Decoded ${bitmap.width}x${bitmap.height} config=${bitmap.config} gainmap=${hasGainmap(bitmap)}")
-        if (!isHdr(bitmap)) {
-          bitmap.recycle()
-          return@post onResult(mapOf("hdr" to false))
-        }
-
-        this.bitmap = bitmap
-        imageView.setImageBitmap(bitmap)
-        applyMatrix()
-        container.visibility = View.VISIBLE
-        setWindowHdr(true)
-        // Reply once the photo has been drawn, so Flutter never reveals an empty layer.
-        container.postOnAnimation { container.post { if (this.token == token) onResult(mapOf("hdr" to true)) } }
+    HdrCache.get(source) { result ->
+      if (slots[token] !== slot) return@get onResult(mapOf("hdr" to false))
+      val bitmap = result.getOrElse {
+        hide(token)
+        return@get onResult(mapOf("hdr" to false, "error" to it.message))
       }
+      if (bitmap == null) {
+        hide(token)
+        return@get onResult(mapOf("hdr" to false))
+      }
+
+      slot.bitmap = bitmap
+      slot.view.setImageBitmap(bitmap)
+      applyMatrix(slot)
+      container.addView(slot.view, FrameLayout.LayoutParams(MATCH, MATCH))
+      container.visibility = View.VISIBLE
+      setWindowHdr(true)
+      // Reply once the photo has been drawn, so Flutter never reveals an empty layer.
+      container.postOnAnimation { container.post { if (slots[token] === slot) onResult(mapOf("hdr" to true)) } }
     }
   }
 
   fun update(token: Long, left: Float, top: Float, width: Float, height: Float) {
-    if (token != this.token) return
-    rect = floatArrayOf(left, top, width, height)
-    applyMatrix()
+    val slot = slots[token] ?: return
+    slot.rect = floatArrayOf(left, top, width, height)
+    applyMatrix(slot)
   }
 
   fun hide(token: Long) {
-    if (token == this.token) clear()
+    val slot = slots.remove(token) ?: return
+    container.removeView(slot.view)
+    slot.view.setImageDrawable(null)
+    if (slots.isEmpty()) {
+      container.visibility = View.GONE
+      setWindowHdr(false)
+    }
   }
 
   fun destroy() {
-    clear()
+    slots.keys.toList().forEach(::hide)
     content?.removeView(container)
   }
 
-  private fun clear() {
-    token = -1L
-    signal?.cancel()
-    signal = null
-    rect = null
-    container.visibility = View.GONE
-    imageView.setImageDrawable(null)
-    bitmap = null
-    setWindowHdr(false)
-  }
-
-  private fun applyMatrix() {
-    val bitmap = bitmap ?: return
-    val (left, top, width, height) = rect ?: return
+  private fun applyMatrix(slot: Slot) {
+    val bitmap = slot.bitmap ?: return
+    val (left, top, width, height) = slot.rect ?: return
     // Flutter reports coordinates relative to the FlutterView, which shares the content root's origin.
-    matrix.setScale(width / bitmap.width, height / bitmap.height)
-    matrix.postTranslate(left, top)
-    imageView.imageMatrix = matrix
+    slot.matrix.setScale(width / bitmap.width, height / bitmap.height)
+    slot.matrix.postTranslate(left, top)
+    slot.view.imageMatrix = slot.matrix
   }
 
   private fun setWindowHdr(enabled: Boolean) {
@@ -242,17 +234,5 @@ private class HdrHost(private val activity: Activity) {
   private companion object {
     const val TAG = "HdrHost"
     const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-
-    fun hasGainmap(bitmap: Bitmap) =
-      Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && bitmap.hasGainmap()
-
-    fun isHdr(bitmap: Bitmap): Boolean {
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
-      if (bitmap.hasGainmap()) return true
-      // HLG / PQ stills without a gain map, e.g. HDR AVIF.
-      val colorSpace = bitmap.colorSpace ?: return false
-      return colorSpace == ColorSpace.get(ColorSpace.Named.BT2020_HLG) ||
-        colorSpace == ColorSpace.get(ColorSpace.Named.BT2020_PQ)
-    }
   }
 }

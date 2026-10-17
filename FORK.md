@@ -48,6 +48,12 @@ Behaviour:
 - **The SDR UI around the photo dims while HDR is showing** (Android). This is how the system displays HDR, and
   Google Photos does the same.
 
+#### Preloading on Android
+
+Decoded HDR photos are kept in a memory cache (about 10% of RAM, at most 512 MB). When you land on a photo, the
+previous and next ones are decoded in the background, so swiping shows them in HDR right away. Each visible page
+has its own native layer, so both photos stay HDR mid-swipe.
+
 #### iPhone HEIC photos on Android
 
 Android decodes the base image of iPhone HEIC photos but ignores their gain map. Two problems have to be solved:
@@ -81,6 +87,7 @@ These are the only edits to upstream files:
   `getRenderMode`, `onCreate`).
 - `AppDelegate.swift`: registers the plugin (one line).
 - `asset_page.widget.dart`: adds the overlay to the page's `Stack`.
+- `asset_preloader.dart`: preloads the HDR renditions of the neighbouring photos.
 - `settings_key.dart`, `image_config.dart` and `app_config.dart`: add the `imageHdr` setting.
 - `asset_viewer_settings.dart`: lists the setting tile.
 
